@@ -40,8 +40,11 @@ const statsData = [
 export default function Inventory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [inventory, setInventory] = useState(inventoryData);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const filteredInventory = inventoryData.filter(item =>
+  const filteredInventory = inventory.filter(item =>
     item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
     item.partNo.toLowerCase().includes(searchTerm.toLowerCase())
@@ -49,8 +52,53 @@ export default function Inventory() {
 
   const handleAddPart = (e: React.FormEvent) => {
     e.preventDefault();
+    const formData = new FormData(e.target as HTMLFormElement);
+    const newPart = {
+      partNo: formData.get('partNo') as string,
+      name: formData.get('partName') as string,
+      brand: formData.get('brand') as string,
+      category: formData.get('category') as string,
+      qoh: Number(formData.get('qoh')),
+      purchasePrice: Number(formData.get('purchasePrice')),
+      sellingPrice: Number(formData.get('sellingPrice')),
+      tax: Number(formData.get('tax'))
+    };
+    setInventory([...inventory, newPart]);
     toast.success("Part added to inventory!");
     setIsDialogOpen(false);
+  };
+
+  const handleDeletePart = (partNo: string) => {
+    setInventory(inventory.filter(item => item.partNo !== partNo));
+    toast.success("Part deleted successfully!");
+  };
+
+  const handleUploadCSV = () => {
+    if (!selectedFile) {
+      toast.error("Please select a file first");
+      return;
+    }
+    // Simulate CSV processing
+    toast.success(`Uploading ${selectedFile.name}...`);
+    setTimeout(() => {
+      toast.success("CSV uploaded and processed successfully!");
+      setIsUploadDialogOpen(false);
+      setSelectedFile(null);
+    }, 1500);
+  };
+
+  const handleExport = () => {
+    const csvContent = inventory.map(item => 
+      `${item.partNo},${item.name},${item.brand},${item.category},${item.qoh},${item.purchasePrice},${item.sellingPrice},${item.tax}`
+    ).join('\n');
+    const blob = new Blob([`Part No,Name,Brand,Category,QoH,Purchase Price,Selling Price,Tax\n${csvContent}`], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'inventory-export.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Inventory exported successfully!");
   };
 
   return (
@@ -61,10 +109,40 @@ export default function Inventory() {
           <p className="text-sm text-muted-foreground mt-1">Manage your spare parts inventory</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => toast.info("Uploading CSV")}>
-            <Upload className="h-4 w-4" />
-            Upload CSV
-          </Button>
+          <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Upload className="h-4 w-4" />
+                Upload CSV
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Upload Inventory CSV</DialogTitle>
+                <DialogDescription>Select a CSV file to import parts into inventory</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="csvFile">CSV File</Label>
+                  <Input 
+                    id="csvFile" 
+                    type="file" 
+                    accept=".csv" 
+                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Format: Part No, Name, Brand, Category, QoH, Purchase Price, Selling Price, Tax
+                  </p>
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsUploadDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleUploadCSV}>Upload</Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
@@ -81,30 +159,30 @@ export default function Inventory() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="partNo">Part Number</Label>
-                    <Input id="partNo" placeholder="e.g., P001" required />
+                    <Input name="partNo" id="partNo" placeholder="e.g., P001" required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="partName">Part Name</Label>
-                    <Input id="partName" placeholder="e.g., Engine Oil" required />
+                    <Input name="partName" id="partName" placeholder="e.g., Engine Oil" required />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="brand">Brand</Label>
-                    <Input id="brand" placeholder="e.g., Castrol" required />
+                    <Input name="brand" id="brand" placeholder="e.g., Castrol" required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="category">Category</Label>
-                    <Select required>
+                    <Select name="category" required>
                       <SelectTrigger>
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="lubricants">Lubricants</SelectItem>
-                        <SelectItem value="filters">Filters</SelectItem>
-                        <SelectItem value="brakes">Brakes</SelectItem>
-                        <SelectItem value="ignition">Ignition</SelectItem>
-                        <SelectItem value="electrical">Electrical</SelectItem>
+                        <SelectItem value="Lubricants">Lubricants</SelectItem>
+                        <SelectItem value="Filters">Filters</SelectItem>
+                        <SelectItem value="Brakes">Brakes</SelectItem>
+                        <SelectItem value="Ignition">Ignition</SelectItem>
+                        <SelectItem value="Electrical">Electrical</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -112,20 +190,20 @@ export default function Inventory() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="qoh">Quantity on Hand</Label>
-                    <Input id="qoh" type="number" placeholder="0" required />
+                    <Input name="qoh" id="qoh" type="number" placeholder="0" required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="purchasePrice">Purchase Price</Label>
-                    <Input id="purchasePrice" type="number" placeholder="₹ 0" required />
+                    <Input name="purchasePrice" id="purchasePrice" type="number" placeholder="₹ 0" required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="sellingPrice">Selling Price</Label>
-                    <Input id="sellingPrice" type="number" placeholder="₹ 0" required />
+                    <Input name="sellingPrice" id="sellingPrice" type="number" placeholder="₹ 0" required />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="tax">Tax %</Label>
-                  <Input id="tax" type="number" placeholder="18" required />
+                  <Input name="tax" id="tax" type="number" placeholder="18" required />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -175,7 +253,7 @@ export default function Inventory() {
                     className="pl-10"
                   />
                 </div>
-                <Button variant="outline" size="icon" onClick={() => toast.success("Exporting inventory")}>
+                <Button variant="outline" size="icon" onClick={handleExport}>
                   <Download className="h-4 w-4" />
                 </Button>
               </div>
@@ -216,7 +294,7 @@ export default function Inventory() {
                             <Button variant="ghost" size="icon" onClick={() => toast.info("Editing part")}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => toast.error("Deleting part")}>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeletePart(item.partNo)}>
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>

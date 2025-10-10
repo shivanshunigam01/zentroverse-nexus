@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,15 @@ import {
 } from "@/components/ui/select";
 
 export default function Settings() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    toast.success("Logged out successfully");
+    setTimeout(() => {
+      window.location.href = '/';
+    }, 1000);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -132,7 +142,7 @@ export default function Settings() {
           <CardTitle className="text-destructive">Danger Zone</CardTitle>
         </CardHeader>
         <CardContent>
-          <Button variant="destructive" className="gap-2" onClick={() => toast.error("Logged out")}>
+          <Button variant="destructive" className="gap-2" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
             Logout
           </Button>

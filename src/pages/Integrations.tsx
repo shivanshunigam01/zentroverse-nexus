@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,22 @@ const integrations = [
 ];
 
 export default function Integrations() {
+  const [integrationsList, setIntegrationsList] = useState(integrations);
+
+  const handleToggle = (name: string) => {
+    setIntegrationsList(integrationsList.map(int => 
+      int.name === name 
+        ? { ...int, status: int.status === "Connected" ? "Not Connected" : "Connected" }
+        : int
+    ));
+    const integration = integrationsList.find(i => i.name === name);
+    if (integration?.status === "Connected") {
+      toast.error(`${name} disconnected`);
+    } else {
+      toast.success(`${name} connected successfully!`);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -46,7 +63,7 @@ export default function Integrations() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {integrations.map((integration) => {
+        {integrationsList.map((integration) => {
           const Icon = integration.icon;
           return (
             <Card key={integration.name} className="border-border">
@@ -67,20 +84,20 @@ export default function Integrations() {
                 </div>
               </CardHeader>
               <CardContent>
-                {integration.status === "Connected" ? (
-                  <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1" onClick={() => toast.info("Opening settings")}>
-                      Settings
-                    </Button>
-                    <Button variant="destructive" className="flex-1" onClick={() => toast.error("Disconnected")}>
-                      Disconnect
-                    </Button>
-                  </div>
-                ) : (
-                  <Button className="w-full" onClick={() => toast.success("Connected successfully!")}>
-                    Connect
+              {integration.status === "Connected" ? (
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={() => toast.info("Opening settings")}>
+                    Settings
                   </Button>
-                )}
+                  <Button variant="destructive" className="flex-1" onClick={() => handleToggle(integration.name)}>
+                    Disconnect
+                  </Button>
+                </div>
+              ) : (
+                <Button className="w-full" onClick={() => handleToggle(integration.name)}>
+                  Connect
+                </Button>
+              )}
               </CardContent>
             </Card>
           );

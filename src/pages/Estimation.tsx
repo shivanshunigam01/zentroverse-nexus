@@ -4,8 +4,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Save, Printer, Send, Trash2 } from "lucide-react";
+import { Plus, Save, Printer, Send, Trash2, Eye, Edit as EditIcon } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const estimationsData = {
   requested: [
@@ -29,6 +48,10 @@ const estimateItems = [
 export default function Estimation() {
   const [activeTab, setActiveTab] = useState("requested");
   const [items, setItems] = useState(estimateItems);
+  const [estimations, setEstimations] = useState(estimationsData);
+  const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
+  const [selectedEstimate, setSelectedEstimate] = useState<any>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const calculateTotal = (item: any) => {
     const partTotal = item.qty * item.rate;
@@ -39,6 +62,66 @@ export default function Estimation() {
 
   const grandTotal = items.reduce((sum, item) => sum + calculateTotal(item), 0);
 
+  const handleCreateEstimate = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newEst = {
+      id: `EST-${String(Object.values(estimations).flat().length + 1).padStart(3, '0')}`,
+      jobNo: `JC-2024-${String(Object.values(estimations).flat().length + 1).padStart(3, '0')}`,
+      customer: "New Customer",
+      vehicle: "Vehicle Details",
+      date: new Date().toISOString().split('T')[0],
+      amount: `₹${grandTotal.toFixed(0)}`
+    };
+    setEstimations({
+      ...estimations,
+      requested: [...estimations.requested, newEst]
+    });
+    setIsNewDialogOpen(false);
+    toast.success("Estimate created successfully!");
+  };
+
+  const handleDeleteEstimate = () => {
+    if (!deleteId) return;
+    const updatedEstimations = { ...estimations };
+    Object.keys(updatedEstimations).forEach(key => {
+      updatedEstimations[key as keyof typeof updatedEstimations] = 
+        updatedEstimations[key as keyof typeof updatedEstimations].filter((est: any) => est.id !== deleteId);
+    });
+    setEstimations(updatedEstimations);
+    setDeleteId(null);
+    toast.success("Estimate deleted successfully!");
+  };
+
+  const handleGenerateInvoice = () => {
+    toast.success("Invoice generated! Download starting...");
+    // Simulate PDF download
+    setTimeout(() => {
+      const blob = new Blob([`Invoice for ${grandTotal.toFixed(2)}`], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'invoice.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    }, 500);
+  };
+
+  const updateItemQuantity = (index: number, field: string, value: number) => {
+    const updatedItems = [...items];
+    updatedItems[index] = { ...updatedItems[index], [field]: value };
+    setItems(updatedItems);
+  };
+
+  const removeItem = (index: number) => {
+    setItems(items.filter((_, idx) => idx !== index));
+    toast.info("Item removed");
+  };
+
+  const addNewItem = () => {
+    setItems([...items, { part: "New Part", labour: "New Labour", qty: 1, rate: 0, labourCost: 0, tax: 18 }]);
+    toast.success("New item added");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -46,10 +129,40 @@ export default function Estimation() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Estimation</h1>
           <p className="text-sm text-muted-foreground mt-1">Create and manage service estimates</p>
         </div>
-        <Button className="gap-2" onClick={() => toast.success("Creating new estimate")}>
-          <Plus className="h-4 w-4" />
-          New Estimate
-        </Button>
+        <Dialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              New Estimate
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create New Estimate</DialogTitle>
+              <DialogDescription>Enter details for the new estimate</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateEstimate} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="customer">Customer Name</Label>
+                <Input id="customer" placeholder="Enter customer name" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vehicle">Vehicle Details</Label>
+                <Input id="vehicle" placeholder="e.g., Maruti Swift" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="regNo">Registration No</Label>
+                <Input id="regNo" placeholder="e.g., MH 01 AB 1234" required />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setIsNewDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Create Estimate</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -73,6 +186,7 @@ export default function Estimation() {
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Vehicle</th>
                         <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Date</th>
                         <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Amount</th>
+                        <th className="text-right py-3 px-4 text-sm font-medium text-muted-foreground">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -84,6 +198,19 @@ export default function Estimation() {
                           <td className="py-3 px-4 text-sm text-foreground">{est.vehicle}</td>
                           <td className="py-3 px-4 text-sm text-muted-foreground">{est.date}</td>
                           <td className="py-3 px-4 text-sm text-foreground font-medium text-right">{est.amount}</td>
+                          <td className="py-3 px-4 text-sm">
+                            <div className="flex justify-end gap-2">
+                              <Button variant="ghost" size="icon" onClick={() => { setSelectedEstimate(est); toast.info("Viewing estimate"); }}>
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => { setSelectedEstimate(est); toast.info("Editing estimate"); }}>
+                                <EditIcon className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => setDeleteId(est.id)}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -120,22 +247,42 @@ export default function Estimation() {
                     <td className="py-3 px-4 text-sm text-foreground">{item.part}</td>
                     <td className="py-3 px-4 text-sm text-foreground">{item.labour}</td>
                     <td className="py-3 px-4">
-                      <Input type="number" value={item.qty} className="w-16 text-center" />
+                      <Input 
+                        type="number" 
+                        value={item.qty} 
+                        onChange={(e) => updateItemQuantity(idx, 'qty', Number(e.target.value))}
+                        className="w-16 text-center" 
+                      />
                     </td>
                     <td className="py-3 px-4">
-                      <Input type="number" value={item.rate} className="w-24 text-right" />
+                      <Input 
+                        type="number" 
+                        value={item.rate} 
+                        onChange={(e) => updateItemQuantity(idx, 'rate', Number(e.target.value))}
+                        className="w-24 text-right" 
+                      />
                     </td>
                     <td className="py-3 px-4">
-                      <Input type="number" value={item.labourCost} className="w-24 text-right" />
+                      <Input 
+                        type="number" 
+                        value={item.labourCost} 
+                        onChange={(e) => updateItemQuantity(idx, 'labourCost', Number(e.target.value))}
+                        className="w-24 text-right" 
+                      />
                     </td>
                     <td className="py-3 px-4">
-                      <Input type="number" value={item.tax} className="w-16 text-center" />
+                      <Input 
+                        type="number" 
+                        value={item.tax} 
+                        onChange={(e) => updateItemQuantity(idx, 'tax', Number(e.target.value))}
+                        className="w-16 text-center" 
+                      />
                     </td>
                     <td className="py-3 px-4 text-sm text-foreground font-medium text-right">
                       ₹{calculateTotal(item).toFixed(2)}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <Button variant="ghost" size="icon" onClick={() => toast.info("Removing item")}>
+                      <Button variant="ghost" size="icon" onClick={() => removeItem(idx)}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </td>
@@ -156,22 +303,45 @@ export default function Estimation() {
             </table>
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" className="gap-2" onClick={() => toast.success("Estimate saved")}>
-              <Save className="h-4 w-4" />
-              Save Estimate
+          <div className="flex justify-between items-center">
+            <Button variant="outline" className="gap-2" onClick={addNewItem}>
+              <Plus className="h-4 w-4" />
+              Add Item
             </Button>
-            <Button variant="outline" className="gap-2" onClick={() => toast.success("Printing estimate")}>
-              <Printer className="h-4 w-4" />
-              Print
-            </Button>
-            <Button className="gap-2" onClick={() => toast.success("Estimate sent to customer")}>
-              <Send className="h-4 w-4" />
-              Send to Customer
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" className="gap-2" onClick={() => toast.success("Estimate saved")}>
+                <Save className="h-4 w-4" />
+                Save Estimate
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={() => toast.success("Printing estimate")}>
+                <Printer className="h-4 w-4" />
+                Print
+              </Button>
+              <Button className="gap-2" onClick={handleGenerateInvoice}>
+                <Send className="h-4 w-4" />
+                Generate Invoice
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Estimate</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this estimate? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteEstimate} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,12 +1,41 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save } from "lucide-react";
+import { Save, Plus, Edit, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+
+const usersData = [
+  { id: "U001", name: "Admin User", email: "admin@zentroverse.com", role: "Administrator", permissions: { view: true, edit: true, delete: true, approve: true, reports: true } },
+  { id: "U002", name: "Service Manager", email: "manager@zentroverse.com", role: "Manager", permissions: { view: true, edit: true, delete: false, approve: true, reports: true } },
+];
 
 export default function WorkshopProfile() {
+  const [users, setUsers] = useState(usersData);
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
+
+  const handleAddUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast.success("User added successfully!");
+    setIsUserDialogOpen(false);
+  };
+
+  const handleDeleteUser = (id: string) => {
+    setUsers(users.filter(u => u.id !== id));
+    toast.success("User removed");
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -100,8 +129,108 @@ export default function WorkshopProfile() {
 
         <TabsContent value="users">
           <Card className="border-border">
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">User roles and permissions management</p>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-foreground">Users & Roles</CardTitle>
+              <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add New User</DialogTitle>
+                    <DialogDescription>Create a new user account with permissions</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleAddUser} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="userName">Full Name</Label>
+                      <Input id="userName" placeholder="Enter name" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="userEmail">Email</Label>
+                      <Input id="userEmail" type="email" placeholder="user@example.com" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="userRole">Role</Label>
+                      <Input id="userRole" placeholder="e.g., Manager" required />
+                    </div>
+                    <div className="space-y-3">
+                      <Label>Permissions</Label>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">View</span>
+                        <Switch defaultChecked />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Edit</span>
+                        <Switch />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Delete</span>
+                        <Switch />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Approve</span>
+                        <Switch />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm">Reports</span>
+                        <Switch />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setIsUserDialogOpen(false)}>Cancel</Button>
+                      <Button type="submit">Add User</Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {users.map((user) => (
+                  <div key={user.id} className="p-4 border border-border rounded-lg">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <p className="font-medium text-foreground">{user.name}</p>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{user.role}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => toast.info("Editing user")}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDeleteUser(user.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-5 gap-2 pt-3 border-t border-border">
+                      <div className="flex items-center gap-2">
+                        <Switch checked={user.permissions.view} />
+                        <span className="text-xs">View</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={user.permissions.edit} />
+                        <span className="text-xs">Edit</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={user.permissions.delete} />
+                        <span className="text-xs">Delete</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={user.permissions.approve} />
+                        <span className="text-xs">Approve</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch checked={user.permissions.reports} />
+                        <span className="text-xs">Reports</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

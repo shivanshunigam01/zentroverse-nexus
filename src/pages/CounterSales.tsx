@@ -61,7 +61,20 @@ export default function CounterSales() {
   const grandTotal = subtotal + tax;
 
   const handleCheckout = () => {
-    toast.success("Invoice generated successfully!");
+    const invoiceNo = `INV-2024-${String(recentInvoices.length + 1).padStart(3, '0')}`;
+    toast.success(`Invoice ${invoiceNo} generated successfully!`);
+    
+    // Simulate PDF download
+    setTimeout(() => {
+      const blob = new Blob([`Invoice ${invoiceNo} - Total: ₹${grandTotal.toFixed(2)}`], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${invoiceNo}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }, 500);
+    
     setCart([]);
   };
 
