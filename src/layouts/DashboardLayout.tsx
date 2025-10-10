@@ -44,9 +44,9 @@ const navigation = [
   { name: "Job Cards", href: "/job-cards", icon: FileText },
   { name: "Estimation", href: "/estimation", icon: Calculator },
   { name: "Counter Sales", href: "/counter-sales", icon: ShoppingCart },
-  { 
-    name: "Inventory", 
-    href: "/inventory", 
+  {
+    name: "Inventory",
+    href: "/inventory",
     icon: Package,
     subItems: [
       { name: "Stock", href: "/inventory" },
@@ -54,34 +54,34 @@ const navigation = [
       { name: "Inward", href: "/inward" },
       { name: "Stock Issue", href: "/stock-issue" },
       { name: "Stock Transfer", href: "/stock-transfer" },
-    ]
+    ],
   },
   { name: "Vendors", href: "/vendors", icon: Truck },
   { name: "CRM Reminders", href: "/crm-reminders", icon: Bell },
   { name: "Reports", href: "/reports", icon: ClipboardList },
-  { 
-    name: "Finance", 
-    href: "/transactions", 
+  {
+    name: "Finance",
+    href: "/transactions",
     icon: DollarSign,
     subItems: [
       { name: "Transactions", href: "/transactions" },
       { name: "Credit/Debit Notes", href: "/credit-debit-notes" },
-    ]
+    ],
   },
   { name: "Customers", href: "/customers", icon: Users },
   { name: "Loyalty Schemes", href: "/loyalty-schemes", icon: StickyNote },
-  { 
-    name: "HR", 
-    href: "/employees", 
+  {
+    name: "HR",
+    href: "/employees",
     icon: UserCircle,
     subItems: [
       { name: "Employees", href: "/employees" },
       { name: "Job Queue", href: "/job-queue" },
-    ]
+    ],
   },
-  { 
-    name: "Settings", 
-    href: "/settings", 
+  {
+    name: "Settings",
+    href: "/settings",
     icon: Settings,
     subItems: [
       { name: "Workshop Profile", href: "/workshop-profile" },
@@ -89,7 +89,7 @@ const navigation = [
       { name: "Templates", href: "/templates" },
       { name: "Associated Workshops", href: "/associated-workshops" },
       { name: "Settings", href: "/settings" },
-    ]
+    ],
   },
 ];
 
@@ -99,8 +99,10 @@ export default function DashboardLayout() {
   const location = useLocation();
 
   const toggleExpanded = (name: string) => {
-    setExpandedItems(prev =>
-      prev.includes(name) ? prev.filter(item => item !== name) : [...prev, name]
+    setExpandedItems((prev) =>
+      prev.includes(name)
+        ? prev.filter((item) => item !== name)
+        : [...prev, name]
     );
   };
 
@@ -118,9 +120,17 @@ export default function DashboardLayout() {
       {/* Sidebar for desktop */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex grow flex-col gap-y-5 overflow-y-auto border-r border-border bg-card px-6 pb-4">
-          <div className="flex h-16 shrink-0 items-center">
-            <Building2 className="h-8 w-8 text-primary" />
-            <span className="ml-2 text-xl font-bold text-foreground">ZENTROVERSE</span>
+          <div className="flex flex-col items-center justify-center py-6 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-800 border-b border-slate-700 shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
+            <div className="p-2 rounded-2xl bg-gradient-to-tr from-blue-500/20 to-cyan-400/10 hover:from-blue-500/30 hover:to-cyan-400/20 transition-all duration-300">
+              <img
+                src="/logo.png"
+                alt="Zentroverse Logo"
+                className="h-20 w-auto object-contain drop-shadow-[0_0_8px_rgba(59,130,246,0.6)] hover:scale-105 transition-transform duration-300"
+              />
+            </div>
+            <h1 className="mt-3 text-sm tracking-widest font-semibold text-slate-300 uppercase drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
+              ERP
+            </h1>
           </div>
           <nav className="flex flex-1 flex-col">
             <ul role="list" className="flex flex-1 flex-col gap-y-7">
@@ -156,7 +166,9 @@ export default function DashboardLayout() {
                             </div>
                             <ChevronDown
                               className={`h-4 w-4 transition-transform ${
-                                expandedItems.includes(item.name) ? "rotate-180" : ""
+                                expandedItems.includes(item.name)
+                                  ? "rotate-180"
+                                  : ""
                               }`}
                             />
                           </button>
@@ -192,18 +204,26 @@ export default function DashboardLayout() {
       {/* Mobile sidebar */}
       {sidebarOpen && (
         <div className="relative z-50 lg:hidden">
-          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
+          <div
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm"
+            onClick={() => setSidebarOpen(false)}
+          />
           <div className="fixed inset-0 flex">
             <div className="relative mr-16 flex w-full max-w-xs flex-1">
               <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
-                <button onClick={() => setSidebarOpen(false)} className="-m-2.5 p-2.5">
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="-m-2.5 p-2.5"
+                >
                   <X className="h-6 w-6 text-foreground" />
                 </button>
               </div>
               <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-card px-6 pb-4">
                 <div className="flex h-16 shrink-0 items-center">
                   <Building2 className="h-8 w-8 text-primary" />
-                  <span className="ml-2 text-xl font-bold text-foreground">ZENTROVERSE</span>
+                  <span className="ml-2 text-xl font-bold text-foreground">
+                    ZENTROVERSE
+                  </span>
                 </div>
                 <nav className="flex flex-1 flex-col">
                   <ul role="list" className="flex flex-1 flex-col gap-y-7">
@@ -257,7 +277,7 @@ export default function DashboardLayout() {
             </form>
             <div className="flex items-center gap-x-4 lg:gap-x-6">
               <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5" />
+                <Bell className="h-5 w-5 text-white" />
                 <span className="absolute right-1 top-1 flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
@@ -267,8 +287,8 @@ export default function DashboardLayout() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center gap-x-2">
-                    <UserCircle className="h-6 w-6" />
-                    <span className="hidden lg:flex lg:items-center">
+                    <UserCircle className="h-6 w-6 text-white" />
+                    <span className="hidden lg:flex lg:items-center text-white">
                       <span className="text-sm font-medium">Admin User</span>
                       <ChevronDown className="ml-2 h-4 w-4" />
                     </span>

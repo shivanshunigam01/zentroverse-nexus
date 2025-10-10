@@ -1,143 +1,248 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
-const incomeData = [
-  { month: "Jan", jobCards: 65000, counterSales: 35000 },
-  { month: "Feb", jobCards: 78000, counterSales: 42000 },
-  { month: "Mar", jobCards: 92000, counterSales: 38000 },
-  { month: "Apr", jobCards: 88000, counterSales: 45000 },
-  { month: "May", jobCards: 105000, counterSales: 52000 },
-  { month: "Jun", jobCards: 125000, counterSales: 48000 },
-];
-
-const expenseData = [
-  { category: "Purchases", amount: 45000 },
-  { category: "Salaries", amount: 85000 },
-  { category: "Rent", amount: 35000 },
-  { category: "Utilities", amount: 15000 },
-  { category: "Others", amount: 20000 },
-];
-
-const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--success))', 'hsl(var(--warning))', 'hsl(var(--info))'];
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  Wallet,
+  Banknote,
+  Boxes,
+  Cog,
+  ChevronRight,
+  ChevronDown,
+  BarChart3,
+} from "lucide-react";
 
 export default function Reports() {
+  const [openSection, setOpenSection] = useState("Income");
+  const [filterType, setFilterType] = useState("Month");
+
+  const toggleSection = (section: string) =>
+    setOpenSection(openSection === section ? "" : section);
+
+  // ----------- Demo Data -----------
+  const incomeData = [
+    { label: "Jan", JobCards: 65000, CounterSales: 35000 },
+    { label: "Feb", JobCards: 78000, CounterSales: 42000 },
+    { label: "Mar", JobCards: 92000, CounterSales: 38000 },
+    { label: "Apr", JobCards: 88000, CounterSales: 45000 },
+    { label: "May", JobCards: 105000, CounterSales: 52000 },
+    { label: "Jun", JobCards: 125000, CounterSales: 48000 },
+  ];
+
+  const expenseData = [
+    { label: "Purchases", Expense: 45000 },
+    { label: "Salaries", Expense: 85000 },
+    { label: "Rent", Expense: 35000 },
+    { label: "Utilities", Expense: 15000 },
+    { label: "Others", Expense: 20000 },
+  ];
+
+  const sidebarItems = [
+    {
+      title: "Income",
+      icon: <Wallet className="h-4 w-4" />,
+      children: [
+        "By Make",
+        "By Customer Type",
+        "By Parts & Services",
+        "By Type of Services",
+        "By Type of Sale",
+        "By Insurer",
+        "Sales Register",
+        "Collections",
+      ],
+    },
+    {
+      title: "Expenses",
+      icon: <Banknote className="h-4 w-4" />,
+      children: ["By Expense Type", "By Vendor", "Payments"],
+    },
+    {
+      title: "Inventory",
+      icon: <Boxes className="h-4 w-4" />,
+      children: [
+        "Stock By Parts",
+        "Stock By Brand",
+        "Stock By Vendor",
+        "Purchase Orders",
+        "Open Vs Closing Stock",
+      ],
+    },
+    {
+      title: "Operations",
+      icon: <Cog className="h-4 w-4" />,
+      children: [
+        "Work In Progress",
+        "By Status",
+        "By Make",
+        "Vehicle Report",
+        "NPS Feedback",
+        "Daily Summary",
+      ],
+    },
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Reports & Analytics</h1>
-          <p className="text-sm text-muted-foreground mt-1">Comprehensive business insights</p>
+    <div className="flex gap-6">
+      {/* ---------- Sidebar ---------- */}
+      <aside className="w-64 bg-gradient-to-b from-green-700 to-emerald-800 text-white rounded-xl shadow-lg p-3">
+        <h2 className="text-lg font-semibold flex items-center gap-2 mb-3">
+          <BarChart3 className="h-5 w-5" />
+          Reports
+        </h2>
+        {sidebarItems.map((item) => (
+          <div key={item.title} className="mb-2">
+            <button
+              onClick={() => toggleSection(item.title)}
+              className="flex justify-between items-center w-full bg-green-800/60 hover:bg-green-700 transition rounded-md px-3 py-2"
+            >
+              <span className="flex items-center gap-2 font-medium">
+                {item.icon}
+                {item.title}
+              </span>
+              {openSection === item.title ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </button>
+            {openSection === item.title && (
+              <div className="ml-7 mt-1 space-y-1 animate-fadeIn">
+                {item.children.map((child) => (
+                  <button
+                    key={child}
+                    className="block w-full text-left text-sm bg-green-900/40 hover:bg-green-700/80 px-2 py-1.5 rounded transition"
+                  >
+                    {child}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </aside>
+
+      {/* ---------- Main Content ---------- */}
+      <main className="flex-1 space-y-6">
+        {/* Header + Filters */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+              Reports & Analytics
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Dynamic business insights with filters and demo data
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-40 bg-card border">
+                <SelectValue placeholder="Filter By" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Month">Month</SelectItem>
+                <SelectItem value="Quarter">Quarter</SelectItem>
+                <SelectItem value="Year">Year</SelectItem>
+              </SelectContent>
+            </Select>
+            <input
+              type="date"
+              className="border rounded-md px-2 py-1 text-sm bg-background text-foreground"
+            />
+          </div>
         </div>
-      </div>
 
-      <Tabs defaultValue="income">
-        <TabsList className="grid w-full max-w-md grid-cols-4">
-          <TabsTrigger value="income">Income</TabsTrigger>
-          <TabsTrigger value="expense">Expense</TabsTrigger>
-          <TabsTrigger value="inventory">Inventory</TabsTrigger>
-          <TabsTrigger value="operations">Operations</TabsTrigger>
-        </TabsList>
+        {/* Tabs */}
+        <Tabs defaultValue="income">
+          <TabsList className="grid w-full max-w-md grid-cols-4">
+            <TabsTrigger value="income">Income</TabsTrigger>
+            <TabsTrigger value="expense">Expense</TabsTrigger>
+            <TabsTrigger value="inventory">Inventory</TabsTrigger>
+            <TabsTrigger value="operations">Operations</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="income" className="space-y-4">
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle className="text-foreground">Income Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={incomeData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" />
-                  <YAxis stroke="hsl(var(--muted-foreground))" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Legend />
-                  <Bar dataKey="jobCards" fill="hsl(var(--primary))" name="Job Cards" />
-                  <Bar dataKey="counterSales" fill="hsl(var(--accent))" name="Counter Sales" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="expense" className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card className="border-border">
+          {/* ---------- Income ---------- */}
+          <TabsContent value="income">
+            <Card>
               <CardHeader>
-                <CardTitle className="text-foreground">Expense Breakdown</CardTitle>
+                <CardTitle>Income Overview</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={expenseData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="hsl(var(--primary))"
-                      dataKey="amount"
-                    >
-                      {expenseData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "8px",
-                      }}
+                <ResponsiveContainer width="100%" height={400}>
+                  <BarChart data={incomeData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="label" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="JobCards" fill="#34d399" name="Job Cards" />
+                    <Bar
+                      dataKey="CounterSales"
+                      fill="#059669"
+                      name="Counter Sales"
                     />
-                  </PieChart>
+                  </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
+          </TabsContent>
 
-            <Card className="border-border">
+          {/* ---------- Expense ---------- */}
+          <TabsContent value="expense">
+            <Card>
               <CardHeader>
-                <CardTitle className="text-foreground">Expense Details</CardTitle>
+                <CardTitle>Expense Breakdown</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {expenseData.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                      <div className="flex items-center gap-3">
-                        <div className="h-4 w-4 rounded" style={{ backgroundColor: COLORS[idx] }}></div>
-                        <span className="text-sm font-medium text-foreground">{item.category}</span>
-                      </div>
-                      <span className="text-sm font-bold text-foreground">₹{item.amount.toLocaleString()}</span>
-                    </div>
-                  ))}
-                </div>
+                <ResponsiveContainer width="100%" height={400}>
+                  <BarChart data={expenseData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="label" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="Expense" fill="#ef4444" name="Expenses" />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="inventory">
-          <Card className="border-border">
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">Inventory reports and analytics</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
+          {/* ---------- Inventory ---------- */}
+          <TabsContent value="inventory">
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                Inventory reports & analytics coming soon.
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="operations">
-          <Card className="border-border">
-            <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">Operational reports and metrics</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+          {/* ---------- Operations ---------- */}
+          <TabsContent value="operations">
+            <Card>
+              <CardContent className="py-12 text-center text-muted-foreground">
+                Operational reports and metrics displayed here.
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
     </div>
   );
 }
