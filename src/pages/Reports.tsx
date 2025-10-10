@@ -1,69 +1,86 @@
 import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   BarChart,
   Bar,
+  Line,
+  LineChart,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import {
   Wallet,
   Banknote,
   Boxes,
   Cog,
-  ChevronRight,
   ChevronDown,
+  ChevronRight,
   BarChart3,
 } from "lucide-react";
 
 export default function Reports() {
   const [openSection, setOpenSection] = useState("Income");
-  const [filterType, setFilterType] = useState("Month");
+  const [selectedReport, setSelectedReport] = useState("Income Overview");
 
-  const toggleSection = (section: string) =>
-    setOpenSection(openSection === section ? "" : section);
+  const COLORS = ["#3b82f6", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444"];
 
-  // ----------- Demo Data -----------
+  // ---------- DEMO DATA BANK ----------
   const incomeData = [
-    { label: "Jan", JobCards: 65000, CounterSales: 35000 },
-    { label: "Feb", JobCards: 78000, CounterSales: 42000 },
-    { label: "Mar", JobCards: 92000, CounterSales: 38000 },
-    { label: "Apr", JobCards: 88000, CounterSales: 45000 },
-    { label: "May", JobCards: 105000, CounterSales: 52000 },
-    { label: "Jun", JobCards: 125000, CounterSales: 48000 },
+    { month: "Jan", JobCards: 74000, CounterSales: 42000 },
+    { month: "Feb", JobCards: 81000, CounterSales: 46000 },
+    { month: "Mar", JobCards: 96000, CounterSales: 50000 },
+    { month: "Apr", JobCards: 88000, CounterSales: 47000 },
+    { month: "May", JobCards: 108000, CounterSales: 55000 },
+    { month: "Jun", JobCards: 122000, CounterSales: 59000 },
   ];
 
   const expenseData = [
-    { label: "Purchases", Expense: 45000 },
-    { label: "Salaries", Expense: 85000 },
-    { label: "Rent", Expense: 35000 },
-    { label: "Utilities", Expense: 15000 },
-    { label: "Others", Expense: 20000 },
+    { category: "Parts Purchase", amount: 65000 },
+    { category: "Salaries", amount: 90000 },
+    { category: "Rent & Utilities", amount: 42000 },
+    { category: "Consumables", amount: 22000 },
+    { category: "Miscellaneous", amount: 18000 },
   ];
 
+  const inventoryData = [
+    { item: "Brake Pad", brand: "Tata Genuine", qty: 42, value: 24000 },
+    { item: "Oil Filter", brand: "Bosch", qty: 55, value: 19500 },
+    { item: "Coolant", brand: "Castrol", qty: 25, value: 12500 },
+    { item: "Tyre", brand: "MRF", qty: 12, value: 48000 },
+  ];
+
+  const operationsData = [
+    { status: "Open Jobs", count: 36 },
+    { status: "Completed Jobs", count: 212 },
+    { status: "Pending Delivery", count: 8 },
+    { status: "Warranty Claims", count: 11 },
+  ];
+
+  // ---------- SIDEBAR ----------
   const sidebarItems = [
     {
       title: "Income",
       icon: <Wallet className="h-4 w-4" />,
-      children: [
+      reports: [
+        "Income Overview",
         "By Make",
         "By Customer Type",
         "By Parts & Services",
-        "By Type of Services",
-        "By Type of Sale",
-        "By Insurer",
         "Sales Register",
         "Collections",
       ],
@@ -71,15 +88,14 @@ export default function Reports() {
     {
       title: "Expenses",
       icon: <Banknote className="h-4 w-4" />,
-      children: ["By Expense Type", "By Vendor", "Payments"],
+      reports: ["Expense Overview", "By Expense Type", "By Vendor", "Payments"],
     },
     {
       title: "Inventory",
       icon: <Boxes className="h-4 w-4" />,
-      children: [
+      reports: [
         "Stock By Parts",
         "Stock By Brand",
-        "Stock By Vendor",
         "Purchase Orders",
         "Open Vs Closing Stock",
       ],
@@ -87,49 +103,281 @@ export default function Reports() {
     {
       title: "Operations",
       icon: <Cog className="h-4 w-4" />,
-      children: [
+      reports: [
         "Work In Progress",
-        "By Status",
-        "By Make",
         "Vehicle Report",
-        "NPS Feedback",
+        "NPS Feedback Report",
         "Daily Summary",
       ],
     },
   ];
 
+  const toggleSection = (title: string) =>
+    setOpenSection(openSection === title ? "" : title);
+
+  // ---------- UNIVERSAL TABLE COMPONENT ----------
+  const DataTable = ({
+    columns,
+    rows,
+  }: {
+    columns: string[];
+    rows: (string | number)[][];
+  }) => (
+    <Card className="border border-slate-700 bg-slate-900 mt-6">
+      <CardHeader>
+        <CardTitle className="text-slate-100">Details</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {columns.map((col) => (
+                <TableHead key={col} className="text-slate-300">
+                  {col}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r, i) => (
+              <TableRow key={i}>
+                {r.map((v, j) => (
+                  <TableCell key={j} className="text-slate-100">
+                    {typeof v === "number" ? `₹${v.toLocaleString()}` : v}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+
+  // ---------- REPORT VIEW ----------
+  const renderReport = () => {
+    switch (true) {
+      // Income
+      case selectedReport.includes("Income"):
+      case selectedReport.includes("By Make"):
+      case selectedReport.includes("Customer"):
+      case selectedReport.includes("Sales Register"):
+      case selectedReport.includes("Collections"):
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>{selectedReport}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={incomeData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="month" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#0f172a",
+                      border: "1px solid #334155",
+                      color: "white",
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="JobCards" fill={COLORS[0]} name="Job Cards" />
+                  <Bar
+                    dataKey="CounterSales"
+                    fill={COLORS[1]}
+                    name="Counter Sales"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+              <DataTable
+                columns={["Source", "Invoices", "Revenue"]}
+                rows={[
+                  ["Job Cards", 248, 740000],
+                  ["Counter Sales", 190, 590000],
+                  ["AMC / Warranty", 54, 160000],
+                ]}
+              />
+            </CardContent>
+          </Card>
+        );
+
+      // Expenses
+      case selectedReport.includes("Expense"):
+      case selectedReport.includes("Payments"):
+      case selectedReport.includes("Vendor"):
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>{selectedReport}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={350}>
+                <PieChart>
+                  <Pie
+                    data={expenseData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) =>
+                      `${name}: ${(percent * 100).toFixed(0)}%`
+                    }
+                    outerRadius={120}
+                    dataKey="amount"
+                  >
+                    {expenseData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#0f172a",
+                      border: "1px solid #334155",
+                      color: "white",
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <DataTable
+                columns={["Head", "Vendor", "Amount"]}
+                rows={[
+                  ["Salaries", "-", 90000],
+                  ["Parts Purchase", "Tata Genuine Parts", 65000],
+                  ["Rent", "Sharma Properties", 25000],
+                  ["Electricity", "Bihar Board", 17000],
+                ]}
+              />
+            </CardContent>
+          </Card>
+        );
+
+      // Inventory
+      case selectedReport.includes("Stock"):
+      case selectedReport.includes("Purchase"):
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>{selectedReport}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={350}>
+                <LineChart data={inventoryData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="item" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#0f172a",
+                      border: "1px solid #334155",
+                      color: "white",
+                    }}
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="qty"
+                    stroke={COLORS[0]}
+                    name="Quantity"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke={COLORS[1]}
+                    name="Value"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+              <DataTable
+                columns={["Item", "Brand", "Qty", "Value"]}
+                rows={inventoryData.map((d) => [
+                  d.item,
+                  d.brand,
+                  d.qty,
+                  d.value,
+                ])}
+              />
+            </CardContent>
+          </Card>
+        );
+
+      // Operations
+      case selectedReport.includes("Work"):
+      case selectedReport.includes("Vehicle"):
+      case selectedReport.includes("Feedback"):
+      case selectedReport.includes("Summary"):
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>{selectedReport}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={350}>
+                <BarChart data={operationsData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="status" stroke="#94a3b8" />
+                  <YAxis stroke="#94a3b8" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#0f172a",
+                      border: "1px solid #334155",
+                      color: "white",
+                    }}
+                  />
+                  <Legend />
+                  <Bar dataKey="count" fill={COLORS[0]} name="Count" />
+                </BarChart>
+              </ResponsiveContainer>
+              <DataTable
+                columns={["Status", "Count"]}
+                rows={operationsData.map((d) => [d.status, d.count])}
+              />
+            </CardContent>
+          </Card>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="flex gap-6">
-      {/* ---------- Sidebar ---------- */}
-      <aside className="w-64 bg-gradient-to-b from-green-700 to-emerald-800 text-white rounded-xl shadow-lg p-3">
-        <h2 className="text-lg font-semibold flex items-center gap-2 mb-3">
-          <BarChart3 className="h-5 w-5" />
+      {/* ---------- SIDEBAR ---------- */}
+      <aside className="w-64 bg-slate-900 border border-slate-800 rounded-xl p-3 shadow">
+        <h2 className="text-lg font-semibold flex items-center gap-2 mb-3 text-slate-100">
+          <BarChart3 className="h-5 w-5 text-primary" />
           Reports
         </h2>
         {sidebarItems.map((item) => (
           <div key={item.title} className="mb-2">
             <button
               onClick={() => toggleSection(item.title)}
-              className="flex justify-between items-center w-full bg-green-800/60 hover:bg-green-700 transition rounded-md px-3 py-2"
+              className="flex justify-between items-center w-full hover:bg-slate-800 rounded-md px-3 py-2 transition"
             >
-              <span className="flex items-center gap-2 font-medium">
+              <span className="flex items-center gap-2 text-sm font-medium text-slate-200">
                 {item.icon}
                 {item.title}
               </span>
               {openSection === item.title ? (
-                <ChevronDown className="h-4 w-4" />
+                <ChevronDown className="h-4 w-4 text-slate-400" />
               ) : (
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4 text-slate-400" />
               )}
             </button>
+
             {openSection === item.title && (
               <div className="ml-7 mt-1 space-y-1 animate-fadeIn">
-                {item.children.map((child) => (
+                {item.reports.map((rep) => (
                   <button
-                    key={child}
-                    className="block w-full text-left text-sm bg-green-900/40 hover:bg-green-700/80 px-2 py-1.5 rounded transition"
+                    key={rep}
+                    onClick={() => setSelectedReport(rep)}
+                    className={`block w-full text-left text-sm px-2 py-1.5 rounded transition ${
+                      selectedReport === rep
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                    }`}
                   >
-                    {child}
+                    {rep}
                   </button>
                 ))}
               </div>
@@ -138,110 +386,17 @@ export default function Reports() {
         ))}
       </aside>
 
-      {/* ---------- Main Content ---------- */}
+      {/* ---------- MAIN CONTENT ---------- */}
       <main className="flex-1 space-y-6">
-        {/* Header + Filters */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Reports & Analytics
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Dynamic business insights with filters and demo data
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-40 bg-card border">
-                <SelectValue placeholder="Filter By" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Month">Month</SelectItem>
-                <SelectItem value="Quarter">Quarter</SelectItem>
-                <SelectItem value="Year">Year</SelectItem>
-              </SelectContent>
-            </Select>
-            <input
-              type="date"
-              className="border rounded-md px-2 py-1 text-sm bg-background text-foreground"
-            />
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-100">
+            {selectedReport}
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">
+            Comprehensive insights for {selectedReport.toLowerCase()}.
+          </p>
         </div>
-
-        {/* Tabs */}
-        <Tabs defaultValue="income">
-          <TabsList className="grid w-full max-w-md grid-cols-4">
-            <TabsTrigger value="income">Income</TabsTrigger>
-            <TabsTrigger value="expense">Expense</TabsTrigger>
-            <TabsTrigger value="inventory">Inventory</TabsTrigger>
-            <TabsTrigger value="operations">Operations</TabsTrigger>
-          </TabsList>
-
-          {/* ---------- Income ---------- */}
-          <TabsContent value="income">
-            <Card>
-              <CardHeader>
-                <CardTitle>Income Overview</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={incomeData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="label" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="JobCards" fill="#34d399" name="Job Cards" />
-                    <Bar
-                      dataKey="CounterSales"
-                      fill="#059669"
-                      name="Counter Sales"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ---------- Expense ---------- */}
-          <TabsContent value="expense">
-            <Card>
-              <CardHeader>
-                <CardTitle>Expense Breakdown</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={expenseData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="label" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="Expense" fill="#ef4444" name="Expenses" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ---------- Inventory ---------- */}
-          <TabsContent value="inventory">
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                Inventory reports & analytics coming soon.
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* ---------- Operations ---------- */}
-          <TabsContent value="operations">
-            <Card>
-              <CardContent className="py-12 text-center text-muted-foreground">
-                Operational reports and metrics displayed here.
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {renderReport()}
       </main>
     </div>
   );
