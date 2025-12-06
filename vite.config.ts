@@ -11,13 +11,7 @@ export default defineConfig(({ mode }) => ({
 
   // 🔥 REQUIRED FOR VERCEL — FIXES WHITE SCREEN
   base: "/",
-
-  plugins: [react(), mode === "development" && componentTagger()].filter(
-    Boolean
-  ),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
+  build: { outDir: "dist", emptyOutDir: true },
+  plugins: [react()],
+  resolve: { alias: { "@": path.resolve(__dirname, "./src") } },
 }));
