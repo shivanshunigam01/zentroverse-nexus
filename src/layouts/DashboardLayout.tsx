@@ -306,7 +306,13 @@ export default function DashboardLayout() {
                     Settings
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive">
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => {
+                      localStorage.removeItem("erp-token");
+                      window.location.href = "/login";
+                    }}
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
                     Logout
                   </DropdownMenuItem>

@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import DashboardLayout from "./layouts/DashboardLayout";
 import Dashboard from "./pages/Dashboard";
 import JobCards from "./pages/JobCards";
@@ -29,6 +30,10 @@ import AssociatedWorkshops from "./pages/AssociatedWorkshops";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ProtectedRoute from "./ProtectedRoute";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -38,7 +43,19 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<DashboardLayout />}>
+          {/* PUBLIC ROUTES */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+
+          {/* PROTECTED ROUTES */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<Dashboard />} />
             <Route path="job-cards" element={<JobCards />} />
             <Route path="estimation" element={<Estimation />} />
@@ -60,9 +77,13 @@ const App = () => (
             <Route path="workshop-profile" element={<WorkshopProfile />} />
             <Route path="integrations" element={<Integrations />} />
             <Route path="templates" element={<Templates />} />
-            <Route path="associated-workshops" element={<AssociatedWorkshops />} />
+            <Route
+              path="associated-workshops"
+              element={<AssociatedWorkshops />}
+            />
             <Route path="settings" element={<Settings />} />
           </Route>
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
