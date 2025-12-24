@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   FileText,
@@ -38,6 +38,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useLogoutMutation } from "@/redux/services/authSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { resetAuth } from "@/redux/reducer/app.reducer";
 //test
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -113,6 +116,21 @@ export default function DashboardLayout() {
   const isParentActive = (item: any) => {
     if (!item.subItems) return false;
     return item.subItems.some((sub: any) => location.pathname === sub.href);
+  };
+  const [logout] = useLogoutMutation();
+  const app = useSelector((state: any) => state.app);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await logout({ refreshToken: app.refreshToken }).unwrap();
+      dispatch(resetAuth());
+      navigate("/login");
+      // Handle successful logout (e.g., redirect to login page)
+    } catch (error) {
+      // Handle logout error
+    }
   };
 
   return (
@@ -289,7 +307,7 @@ export default function DashboardLayout() {
                   <Button variant="ghost" className="flex items-center gap-x-2">
                     <UserCircle className="h-6 w-6 text-white" />
                     <span className="hidden lg:flex lg:items-center text-white">
-                      <span className="text-sm font-medium">Admin User</span>
+                      <span className="text-sm font-medium">{app.user?.name}</span>
                       <ChevronDown className="ml-2 h-4 w-4" />
                     </span>
                   </Button>
@@ -308,10 +326,7 @@ export default function DashboardLayout() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive"
-                    onClick={() => {
-                      localStorage.removeItem("erp-token");
-                      window.location.href = "/login";
-                    }}
+                    onClick={handleLogout}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
                     Logout
