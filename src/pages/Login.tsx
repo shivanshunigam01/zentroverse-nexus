@@ -32,17 +32,19 @@ export default function Login() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const data = await login(values).unwrap();
-      console.log(data);
-      dispatch(
+       dispatch(
         setCredentials({
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken ?? null,
-          user: data.user,
+          accessToken: 'data.accessToken',
+          refreshToken: 'data.refreshToken ?? null',
+          user: 'data.user',
         })
       );
+            navigate("/");
+
+      const data = await login(values).unwrap();
+      console.log(data);
+     
       toast({ title: "Welcome to Zentroverse ERP" });
-      navigate("/");
     } catch (err: any) {
       const message =
         err?.data?.message || err?.error || err?.message || "Login failed";
