@@ -1,24 +1,55 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { useLoginMutation } from "@/redux/services/authSlice";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useDispatch, useSelector } from "react-redux";
+import { setCredentials } from "@/redux/reducer/app.reducer";
+
+const schema = z.object({
+  email: z.string().min(1, "Email is required").email("Invalid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
+type FormValues = z.infer<typeof schema>;
 
 export default function Login() {
-  const [loading, setLoading] = useState(false);
+  const [login, { isLoading }] = useLoginMutation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  const handleLogin = (e: any) => {
-    e.preventDefault();
-    setLoading(true);
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { email: "", password: "" },
+  });
 
-    setTimeout(() => {
-      localStorage.setItem("erp-token", "dummy-token");
+  const onSubmit = async (values: FormValues) => {
+    try {
+      const data = await login(values).unwrap();
+      console.log(data);
+      dispatch(
+        setCredentials({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken ?? null,
+          user: data.user,
+        })
+      );
       toast({ title: "Welcome to Zentroverse ERP" });
       navigate("/");
-      setLoading(false);
-    }, 1000);
+    } catch (err: any) {
+      const message =
+        err?.data?.message || err?.error || err?.message || "Login failed";
+      toast({ title: "Login failed", description: message });
+    }
   };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 px-4">
@@ -43,23 +74,45 @@ export default function Login() {
           </h2>
 
           {/* FORM */}
-          <form onSubmit={handleLogin} className="space-y-4">
-            <Input
-              type="email"
-              placeholder="Email"
-              className="bg-white/10 text-white border-white/20 placeholder:text-gray-300"
-              required
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <>
+                  <Input
+                    {...field}
+                    type="email"
+                    placeholder="Email"
+                    className="bg-white/10 text-white border-white/20 placeholder:text-gray-300"
+                  />
+                  {errors.email && (
+                    <p className="text-sm text-red-400 ">{errors.email.message}</p>
+                  )}
+                </>
+              )}
             />
 
-            <Input
-              type="password"
-              placeholder="Password"
-              className="bg-white/10 text-white border-white/20 placeholder:text-gray-300"
-              required
+            <Controller
+              name="password"
+              control={control}
+              render={({ field }) => (
+                <>
+                  <Input
+                    {...field}
+                    type="password"
+                    placeholder="Password"
+                    className="bg-white/10 text-white border-white/20 placeholder:text-gray-300"
+                  />
+                  {errors.password && (
+                    <p className="text-sm text-red-400">{errors.password.message}</p>
+                  )}
+                </>
+              )}
             />
 
-            <Button className="w-full mt-2" disabled={loading}>
-              {loading ? "Logging in..." : "Login"}
+            <Button className="w-full mt-2" disabled={isSubmitting || isLoading}>
+              {isSubmitting || isLoading ? "Logging in..." : "Login"}
             </Button>
           </form>
 

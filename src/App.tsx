@@ -33,62 +33,66 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProtectedRoute from "./ProtectedRoute";
+import { Provider } from "react-redux";
+import { store } from "./redux/store";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* PUBLIC ROUTES */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+  <Provider store={store}>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* PUBLIC ROUTES */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          {/* PROTECTED ROUTES */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Dashboard />} />
-            <Route path="job-cards" element={<JobCards />} />
-            <Route path="estimation" element={<Estimation />} />
-            <Route path="counter-sales" element={<CounterSales />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="purchase-orders" element={<PurchaseOrders />} />
-            <Route path="vendors" element={<Vendors />} />
-            <Route path="inward" element={<Inward />} />
-            <Route path="stock-issue" element={<StockIssue />} />
-            <Route path="stock-transfer" element={<StockTransfer />} />
-            <Route path="crm-reminders" element={<CRMReminders />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="transactions" element={<Transactions />} />
-            <Route path="customers" element={<Customers />} />
-            <Route path="credit-debit-notes" element={<CreditDebitNotes />} />
-            <Route path="loyalty-schemes" element={<LoyaltySchemes />} />
-            <Route path="employees" element={<Employees />} />
-            <Route path="job-queue" element={<JobQueue />} />
-            <Route path="workshop-profile" element={<WorkshopProfile />} />
-            <Route path="integrations" element={<Integrations />} />
-            <Route path="templates" element={<Templates />} />
+            {/* PROTECTED ROUTES */}
             <Route
-              path="associated-workshops"
-              element={<AssociatedWorkshops />}
-            />
-            <Route path="settings" element={<Settings />} />
-          </Route>
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="job-cards" element={<JobCards />} />
+              <Route path="estimation" element={<Estimation />} />
+              <Route path="counter-sales" element={<CounterSales />} />
+              <Route path="inventory" element={<Inventory />} />
+              <Route path="purchase-orders" element={<PurchaseOrders />} />
+              <Route path="vendors" element={<Vendors />} />
+              <Route path="inward" element={<Inward />} />
+              <Route path="stock-issue" element={<StockIssue />} />
+              <Route path="stock-transfer" element={<StockTransfer />} />
+              <Route path="crm-reminders" element={<CRMReminders />} />
+              <Route path="reports" element={<Reports />} />
+              <Route path="transactions" element={<Transactions />} />
+              <Route path="customers" element={<Customers />} />
+              <Route path="credit-debit-notes" element={<CreditDebitNotes />} />
+              <Route path="loyalty-schemes" element={<LoyaltySchemes />} />
+              <Route path="employees" element={<Employees />} />
+              <Route path="job-queue" element={<JobQueue />} />
+              <Route path="workshop-profile" element={<WorkshopProfile />} />
+              <Route path="integrations" element={<Integrations />} />
+              <Route path="templates" element={<Templates />} />
+              <Route
+                path="associated-workshops"
+                element={<AssociatedWorkshops />}
+              />
+              <Route path="settings" element={<Settings />} />
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </Provider>
 );
 
 export default App;

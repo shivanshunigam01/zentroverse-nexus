@@ -13,17 +13,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { resetAuth } from "@/redux/reducer/app.reducer";
+import { useDispatch, useSelector } from "react-redux";
+import { useLogoutMutation } from "@/redux/services/authSlice";
 
 export default function Settings() {
+   const [logout] = useLogoutMutation();
+  const app = useSelector((state: any) => state.app);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    toast.success("Logged out successfully");
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 1000);
+  const handleLogout = async () => {
+    try {
+      await logout({ refreshToken: app.refreshToken }).unwrap();
+      dispatch(resetAuth());
+      navigate("/login");
+      // Handle successful logout (e.g., redirect to login page)
+    } catch (error) {
+      // Handle logout error
+    }
   };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
