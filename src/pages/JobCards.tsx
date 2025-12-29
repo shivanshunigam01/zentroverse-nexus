@@ -353,8 +353,47 @@ export default function JobCards() {
   };
 
 
-  const handleExport = () => {
-    toast.success("Exporting job cards data...");
+  const handleExport = async () => {
+    try {
+      toast.info("Preparing export...");
+      const params = new URLSearchParams();
+      params.set("page", "1");
+      params.set("limit", String(state.total || 1000));
+      if (searchTerm) params.set("search", searchTerm);
+      if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
+
+      const res = await fetch(`${BASE}/api/jobcards?${params.toString()}`);
+      const json = await res.json();
+      const rows = json.data || [];
+      if (!rows.length) {
+        toast.info('No job cards to export');
+        return;
+      }
+
+      const headers = ["Job Number","Title","Customer","Service Advisor","Status","Created At"];
+      const esc = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const csvRows = rows.map((r: any) => [
+        esc(r.jobNumber),
+        esc(r.title),
+        esc(r.customer),
+        esc(r.assignedTo),
+        esc(r.status),
+        esc(new Date(r.createdAt).toLocaleString()),
+      ].join(","));
+
+      const csv = [headers.join(","), ...csvRows].join("\n");
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `jobcards-export-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Export ready');
+    } catch (err: any) {
+      console.error(err);
+      toast.error('Export failed');
+    }
   };
 
   return (
@@ -604,9 +643,10 @@ export default function JobCards() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="In Progress">In Progress</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" size="icon" onClick={handleExport}>
