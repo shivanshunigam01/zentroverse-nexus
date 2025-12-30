@@ -54,7 +54,9 @@ const getStatusBadge = (status: string) => {
     "Cancelled": "destructive",
     "cancelled": "destructive",
   };
-  return <Badge variant={variants[status] || "default"}>{status}</Badge>;
+  const key = (status || '').toString().toLowerCase();
+  const item = variants[key] || 'default';
+  return <Badge variant={item as "default" | "secondary" | "destructive" | "outline"}>{status}</Badge>;
 };
 
 export default function JobCards() {
