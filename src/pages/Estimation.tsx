@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Save, Printer, Send, Trash2, Eye, Edit as EditIcon, ChevronDown } from "lucide-react";
+import { Plus, Save, Printer, Send, Trash2, Eye, Edit as EditIcon, ChevronDown, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -56,6 +56,11 @@ export default function Estimation() {
   const [activeTab, setActiveTab] = useState("requested");
   const [items, setItems] = useState<EstimateItem[]>([]);
   const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -167,12 +172,12 @@ export default function Estimation() {
   const handleViewEstimate = (estimate: Estimate) => {
     setSelectedEstimate(estimate);
     setItems(estimate.items || []);
+    setIsEditMode(false);
   };
 
   const handleEditEstimate = (estimate: Estimate) => {
     setSelectedEstimate(estimate);
-    setItems(estimate.items || []);
-    toast.info("Editing estimate - make changes and click Save");
+    setIsEditDialogOpen(true);
   };
 
   const generatePDF = (estimate: Estimate) => {
@@ -358,15 +363,58 @@ export default function Estimation() {
     setItems(updatedItems);
   };
 
-  const removeItem = (index: number) => {
-    const updatedItems = items.filter((_, idx) => idx !== index);
-    setItems(updatedItems);
-    toast.info("Item removed");
+  const removeItem = async (index: number) => {
+    if (!selectedEstimate) {
+      toast.error("Please select an estimate first");
+      return;
+    }
+
+    try {
+      const updatedItems = items.filter((_, idx) => idx !== index);
+      const updated = await updateEstimate({
+        id: selectedEstimate._id,
+        data: {
+          items: updatedItems,
+        },
+      }).unwrap();
+      setSelectedEstimate(updated);
+      setItems(updated.items);
+      toast.success("Item deleted successfully!");
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to delete item");
+    }
   };
 
-  const addNewItem = () => {
-    setItems([...items, { part: "New Part", labour: "New Labour", qty: 1, rate: 0, labourCost: 0, tax: 18 }]);
-    toast.success("New item added");
+
+  const handleUpdateEstimateDetails = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!selectedEstimate) return;
+
+    const formData = new FormData(e.currentTarget);
+    const customerName = String(formData.get("customer") || "").trim();
+    const vehicleDetails = String(formData.get("vehicle") || "").trim();
+    const registrationNo = String(formData.get("regNo") || "").trim();
+
+    if (!customerName || !vehicleDetails) {
+      toast.error("Customer name and vehicle details are required");
+      return;
+    }
+
+    try {
+      const updated = await updateEstimate({
+        id: selectedEstimate._id,
+        data: {
+          customerName,
+          vehicleDetails,
+          registrationNo: registrationNo || undefined,
+        },
+      }).unwrap();
+      setSelectedEstimate(updated);
+      setIsEditDialogOpen(false);
+      toast.success("Estimate details updated successfully!");
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to update estimate");
+    }
   };
 
   const handleSaveEstimate = async () => {
@@ -383,9 +431,93 @@ export default function Estimation() {
       }).unwrap();
       setSelectedEstimate(updated);
       setItems(updated.items);
+      setIsEditMode(false);
       toast.success("Estimate saved successfully!");
     } catch (error: any) {
       toast.error(error?.data?.message || "Failed to save estimate");
+    }
+  };
+
+  const handleAddItem = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const newItem: EstimateItem = {
+      part: String(formData.get("part") || "").trim(),
+      labour: String(formData.get("labour") || "").trim(),
+      qty: Number(formData.get("qty")) || 1,
+      rate: Number(formData.get("rate")) || 0,
+      labourCost: Number(formData.get("labourCost")) || 0,
+      tax: Number(formData.get("tax")) || 18,
+    };
+
+    if (!newItem.part || !newItem.labour) {
+      toast.error("Part and Labour are required");
+      return;
+    }
+
+    if (!selectedEstimate) {
+      toast.error("Please select an estimate first");
+      return;
+    }
+
+    try {
+      const updatedItems = [...items, newItem];
+      const updated = await updateEstimate({
+        id: selectedEstimate._id,
+        data: {
+          items: updatedItems,
+        },
+      }).unwrap();
+      setSelectedEstimate(updated);
+      setItems(updated.items);
+      setIsAddItemDialogOpen(false);
+      e.currentTarget.reset();
+      toast.success("Item added successfully!");
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to add item");
+    }
+  };
+
+  const handleEditItem = (index: number) => {
+    setEditingItemIndex(index);
+    setIsEditItemDialogOpen(true);
+  };
+
+  const handleUpdateItem = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (editingItemIndex === null || !selectedEstimate) return;
+
+    const formData = new FormData(e.currentTarget);
+    const updatedItem: EstimateItem = {
+      part: String(formData.get("part") || "").trim(),
+      labour: String(formData.get("labour") || "").trim(),
+      qty: Number(formData.get("qty")) || 1,
+      rate: Number(formData.get("rate")) || 0,
+      labourCost: Number(formData.get("labourCost")) || 0,
+      tax: Number(formData.get("tax")) || 18,
+    };
+
+    if (!updatedItem.part || !updatedItem.labour) {
+      toast.error("Part and Labour are required");
+      return;
+    }
+
+    try {
+      const updatedItems = [...items];
+      updatedItems[editingItemIndex] = updatedItem;
+      const updated = await updateEstimate({
+        id: selectedEstimate._id,
+        data: {
+          items: updatedItems,
+        },
+      }).unwrap();
+      setSelectedEstimate(updated);
+      setItems(updated.items);
+      setIsEditItemDialogOpen(false);
+      setEditingItemIndex(null);
+      toast.success("Item updated successfully!");
+    } catch (error: any) {
+      toast.error(error?.data?.message || "Failed to update item");
     }
   };
 
@@ -585,9 +717,23 @@ export default function Estimation() {
       {selectedEstimate && (
         <Card className="border-border">
           <CardHeader>
-            <CardTitle className="text-foreground">
-              Estimate Details - {selectedEstimate.estimateId}
-            </CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-foreground">
+                Estimate Details - {selectedEstimate.estimateId}
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setSelectedEstimate(null);
+                  setItems([]);
+                  setIsEditMode(false);
+                }}
+                title="Close Estimate Details"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="overflow-x-auto">
@@ -615,73 +761,113 @@ export default function Estimation() {
                     items.map((item, idx) => (
                       <tr key={idx} className="border-b border-border">
                         <td className="py-3 px-4 text-sm text-foreground">
-                          <Input
-                            value={item.part}
-                            onChange={(e) => {
-                              const updatedItems = [...items];
-                              updatedItems[idx] = { ...updatedItems[idx], part: e.target.value };
-                              setItems(updatedItems);
-                            }}
-                            className="border-0 p-0 h-auto bg-transparent focus-visible:ring-0"
-                          />
+                          {isEditMode ? (
+                            <Input
+                              value={item.part}
+                              onChange={(e) => {
+                                const updatedItems = [...items];
+                                updatedItems[idx] = { ...updatedItems[idx], part: e.target.value };
+                                setItems(updatedItems);
+                              }}
+                              className="border-0 p-0 h-auto bg-transparent focus-visible:ring-0"
+                            />
+                          ) : (
+                            item.part
+                          )}
                         </td>
                         <td className="py-3 px-4 text-sm text-foreground">
-                          <Input
-                            value={item.labour}
-                            onChange={(e) => {
-                              const updatedItems = [...items];
-                              updatedItems[idx] = { ...updatedItems[idx], labour: e.target.value };
-                              setItems(updatedItems);
-                            }}
-                            className="border-0 p-0 h-auto bg-transparent focus-visible:ring-0"
-                          />
+                          {isEditMode ? (
+                            <Input
+                              value={item.labour}
+                              onChange={(e) => {
+                                const updatedItems = [...items];
+                                updatedItems[idx] = { ...updatedItems[idx], labour: e.target.value };
+                                setItems(updatedItems);
+                              }}
+                              className="border-0 p-0 h-auto bg-transparent focus-visible:ring-0"
+                            />
+                          ) : (
+                            item.labour
+                          )}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <Input
-                            type="number"
-                            value={item.qty}
-                            onChange={(e) => updateItemQuantity(idx, "qty", Number(e.target.value) || 0)}
-                            className="w-16 text-center mx-auto"
-                            min="0"
-                          />
+                          {isEditMode ? (
+                            <Input
+                              type="number"
+                              value={item.qty}
+                              onChange={(e) => updateItemQuantity(idx, "qty", Number(e.target.value) || 0)}
+                              className="w-16 text-center mx-auto"
+                              min="0"
+                            />
+                          ) : (
+                            item.qty
+                          )}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <Input
-                            type="number"
-                            value={item.rate}
-                            onChange={(e) => updateItemQuantity(idx, "rate", Number(e.target.value) || 0)}
-                            className="w-24 text-right ml-auto"
-                            min="0"
-                            step="0.01"
-                          />
+                          {isEditMode ? (
+                            <Input
+                              type="number"
+                              value={item.rate}
+                              onChange={(e) => updateItemQuantity(idx, "rate", Number(e.target.value) || 0)}
+                              className="w-24 text-right ml-auto"
+                              min="0"
+                              step="0.01"
+                            />
+                          ) : (
+                            `₹${item.rate.toFixed(2)}`
+                          )}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <Input
-                            type="number"
-                            value={item.labourCost}
-                            onChange={(e) => updateItemQuantity(idx, "labourCost", Number(e.target.value) || 0)}
-                            className="w-24 text-right ml-auto"
-                            min="0"
-                            step="0.01"
-                          />
+                          {isEditMode ? (
+                            <Input
+                              type="number"
+                              value={item.labourCost}
+                              onChange={(e) => updateItemQuantity(idx, "labourCost", Number(e.target.value) || 0)}
+                              className="w-24 text-right ml-auto"
+                              min="0"
+                              step="0.01"
+                            />
+                          ) : (
+                            `₹${item.labourCost.toFixed(2)}`
+                          )}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <Input
-                            type="number"
-                            value={item.tax}
-                            onChange={(e) => updateItemQuantity(idx, "tax", Number(e.target.value) || 0)}
-                            className="w-16 text-center mx-auto"
-                            min="0"
-                            step="0.01"
-                          />
+                          {isEditMode ? (
+                            <Input
+                              type="number"
+                              value={item.tax}
+                              onChange={(e) => updateItemQuantity(idx, "tax", Number(e.target.value) || 0)}
+                              className="w-16 text-center mx-auto"
+                              min="0"
+                              step="0.01"
+                            />
+                          ) : (
+                            `${item.tax}%`
+                          )}
                         </td>
                         <td className="py-3 px-4 text-sm text-foreground font-medium text-right">
                           ₹{calculateTotal(item).toFixed(2)}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <Button variant="ghost" size="icon" onClick={() => removeItem(idx)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <div className="flex justify-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEditItem(idx)}
+                              title="Edit Item"
+                            >
+                              <EditIcon className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeItem(idx)}
+                              title="Delete Item"
+                              disabled={isUpdating}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -702,20 +888,40 @@ export default function Estimation() {
             </div>
 
             <div className="flex justify-between items-center">
-              <Button variant="outline" className="gap-2" onClick={addNewItem}>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => setIsAddItemDialogOpen(true)}
+              >
                 <Plus className="h-4 w-4" />
                 Add Item
               </Button>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="gap-2"
-                  onClick={handleSaveEstimate}
-                  disabled={isUpdating}
-                >
-                  <Save className="h-4 w-4" />
-                  {isUpdating ? "Saving..." : "Save Estimate"}
-                </Button>
+                {isEditMode && (
+                  <>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => {
+                        setIsEditMode(false);
+                        if (selectedEstimate) {
+                          setItems(selectedEstimate.items || []);
+                        }
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={handleSaveEstimate}
+                      disabled={isUpdating}
+                    >
+                      <Save className="h-4 w-4" />
+                      {isUpdating ? "Saving..." : "Save Estimate"}
+                    </Button>
+                  </>
+                )}
                 <Button variant="outline" className="gap-2" onClick={handlePrintEstimate}>
                   <Printer className="h-4 w-4" />
                   Print
@@ -729,6 +935,254 @@ export default function Estimation() {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Estimate Details Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Estimate Details</DialogTitle>
+            <DialogDescription>Update the estimate information</DialogDescription>
+          </DialogHeader>
+          {selectedEstimate && (
+            <form onSubmit={handleUpdateEstimateDetails} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-customer">Customer Name</Label>
+                <Input
+                  id="edit-customer"
+                  name="customer"
+                  defaultValue={selectedEstimate.customerName}
+                  placeholder="Enter customer name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-vehicle">Vehicle Details</Label>
+                <Input
+                  id="edit-vehicle"
+                  name="vehicle"
+                  defaultValue={selectedEstimate.vehicleDetails}
+                  placeholder="e.g., Maruti Swift"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-regNo">Registration No</Label>
+                <Input
+                  id="edit-regNo"
+                  name="regNo"
+                  defaultValue={selectedEstimate.registrationNo || ""}
+                  placeholder="e.g., MH 01 AB 1234"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isUpdating}>
+                  {isUpdating ? "Updating..." : "Update Estimate"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Item Dialog */}
+      <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Item</DialogTitle>
+            <DialogDescription>Enter details for the new item</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddItem} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="add-part">Part</Label>
+              <Input
+                id="add-part"
+                name="part"
+                placeholder="Enter part name"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="add-labour">Labour</Label>
+              <Input
+                id="add-labour"
+                name="labour"
+                placeholder="Enter labour description"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="add-qty">Quantity</Label>
+                <Input
+                  id="add-qty"
+                  name="qty"
+                  type="number"
+                  defaultValue="1"
+                  min="0"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="add-rate">Rate</Label>
+                <Input
+                  id="add-rate"
+                  name="rate"
+                  type="number"
+                  defaultValue="0"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="add-labourCost">Labour Cost</Label>
+                <Input
+                  id="add-labourCost"
+                  name="labourCost"
+                  type="number"
+                  defaultValue="0"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="add-tax">Tax %</Label>
+                <Input
+                  id="add-tax"
+                  name="tax"
+                  type="number"
+                  defaultValue="18"
+                  min="0"
+                  step="0.01"
+                  required
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsAddItemDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isUpdating}>
+                {isUpdating ? "Adding..." : "Add Item"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Item</DialogTitle>
+            <DialogDescription>Update the item details</DialogDescription>
+          </DialogHeader>
+          {editingItemIndex !== null && items[editingItemIndex] && (
+            <form onSubmit={handleUpdateItem} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-item-part">Part</Label>
+                <Input
+                  id="edit-item-part"
+                  name="part"
+                  defaultValue={items[editingItemIndex].part}
+                  placeholder="Enter part name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-item-labour">Labour</Label>
+                <Input
+                  id="edit-item-labour"
+                  name="labour"
+                  defaultValue={items[editingItemIndex].labour}
+                  placeholder="Enter labour description"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-item-qty">Quantity</Label>
+                  <Input
+                    id="edit-item-qty"
+                    name="qty"
+                    type="number"
+                    defaultValue={items[editingItemIndex].qty}
+                    min="0"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-item-rate">Rate</Label>
+                  <Input
+                    id="edit-item-rate"
+                    name="rate"
+                    type="number"
+                    defaultValue={items[editingItemIndex].rate}
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-item-labourCost">Labour Cost</Label>
+                  <Input
+                    id="edit-item-labourCost"
+                    name="labourCost"
+                    type="number"
+                    defaultValue={items[editingItemIndex].labourCost}
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-item-tax">Tax %</Label>
+                  <Input
+                    id="edit-item-tax"
+                    name="tax"
+                    type="number"
+                    defaultValue={items[editingItemIndex].tax}
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditItemDialogOpen(false);
+                    setEditingItemIndex(null);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isUpdating}>
+                  {isUpdating ? "Updating..." : "Update Item"}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
