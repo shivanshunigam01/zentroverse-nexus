@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 
 export default function ProtectedRoute({ children }: any) {
 
-   const app = useSelector((state) => state.app);
+  const app = useSelector((state: any) => state.app);
   if (!app.isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
