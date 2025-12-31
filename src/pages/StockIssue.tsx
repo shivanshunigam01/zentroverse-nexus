@@ -11,8 +11,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useGetStockIssuesQuery } from "@/redux/services/stockIssuesSlice";
 
 export default function StockIssue() {
+  const {data} = useGetStockIssuesQuery({
+    page:1,
+    limit: 1000
+  });
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
