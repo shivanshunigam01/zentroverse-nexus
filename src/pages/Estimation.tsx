@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,17 +40,9 @@ import {
   type Estimate,
   type EstimateItem,
 } from "@/redux/api/estimationApi";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
-
-declare module "jspdf" {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-    lastAutoTable?: {
-      finalY: number;
-    };
-  }
-}
+import { useGetJobCardByJobCardNoQuery } from "@/redux/services/jobCardSlice";
+import html2pdf from "html2pdf.js";
+import InvoiceTemplate from "./InvoiceTemplate";
 
 export default function Estimation() {
   const [activeTab, setActiveTab] = useState("requested");
@@ -63,6 +55,9 @@ export default function Estimation() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const invoiceRef = useRef<HTMLDivElement>(null);
+  const [jobCardNo, setJobCardNo] = useState<string>("");
+  const [jobCardNoToFetch, setJobCardNoToFetch] = useState<string | null>(null);
 
   const { data: allEstimates = [] } = useGetEstimatesQuery(undefined);
   
@@ -94,6 +89,15 @@ export default function Estimation() {
   const [updateEstimateStatus, { isLoading: isUpdatingStatus }] = useUpdateEstimateStatusMutation();
   const [deleteEstimate, { isLoading: isDeleting }] = useDeleteEstimateMutation();
 
+  // Fetch job card when jobCardNoToFetch is set
+  const {
+    data: jobCardData,
+    isLoading: isLoadingJobCard,
+    error: jobCardError,
+  } = useGetJobCardByJobCardNoQuery(jobCardNoToFetch || "", {
+    skip: !jobCardNoToFetch || jobCardNoToFetch.trim() === "",
+  });
+
   useEffect(() => {
     if (selectedEstimate) {
       setItems(selectedEstimate.items || []);
@@ -117,40 +121,62 @@ export default function Estimation() {
   const handleCreateEstimate = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const customerName = String(formData.get("customer") || "").trim();
-    const vehicleDetails = String(formData.get("vehicle") || "").trim();
-    const registrationNo = String(formData.get("regNo") || "").trim();
+    const jobCardNumber = String(formData.get("jobCardNo") || "").trim().toUpperCase();
 
-    if (!customerName || !vehicleDetails || !registrationNo) {
-      toast.error("Please fill all required fields");
+    if (!jobCardNumber) {
+      toast.error("Please enter a job card number");
+      return;
+    }
+
+    // Check if job card exists
+    if (jobCardError || !jobCardData) {
+      toast.error("This job card does not exist");
+      return;
+    }
+
+    const jobCard = jobCardData.data || (jobCardData as any).jobCard || jobCardData;
+    const customerName = jobCard.customerName || jobCard.customer || "";
+    const vehicleDetails = jobCard.vehicle || "";
+    const registrationNo = jobCard.regNo || "";
+
+    if (!customerName || !vehicleDetails) {
+      toast.error("Job card is missing required information");
       return;
     }
 
     try {
       const created = await createEstimate({
+        jobNo: jobCardNumber,
         customerName,
         vehicleDetails,
         registrationNo,
-        items: items.length
-          ? items
-          : [
-              {
-                part: "Engine Oil 5W-30",
-                labour: "Oil Change",
-                qty: 4,
-                rate: 450,
-                labourCost: 500,
-                tax: 18,
-              },
-            ],
+        items: [], // No default items
       }).unwrap();
+      
+      // Reset form before closing dialog
+      if (e.currentTarget) {
+        e.currentTarget.reset();
+      }
+      setJobCardNo("");
+      setJobCardNoToFetch(null);
       setIsNewDialogOpen(false);
-      setSelectedEstimate(created);
-      setItems(created.items);
+      setSelectedEstimate(null); // Don't auto-select, let user click "Add Details"
+      setItems([]);
       toast.success("Estimate created successfully!");
-      e.currentTarget.reset();
     } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to create estimate");
+      console.error("Error creating estimate:", error);
+      const errorMessage = error?.data?.message || error?.message || "Failed to create estimate";
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleJobCardNoChange = (value: string) => {
+    const trimmedValue = value.trim().toUpperCase();
+    setJobCardNo(value);
+    if (trimmedValue.length > 0) {
+      setJobCardNoToFetch(trimmedValue);
+    } else {
+      setJobCardNoToFetch(null);
     }
   };
 
@@ -175,128 +201,37 @@ export default function Estimation() {
     setIsEditMode(false);
   };
 
+  const handleAddDetails = (estimate: Estimate) => {
+    setSelectedEstimate(estimate);
+    setItems(estimate.items || []);
+    setIsEditMode(false);
+    setIsAddItemDialogOpen(true);
+  };
+
   const handleEditEstimate = (estimate: Estimate) => {
     setSelectedEstimate(estimate);
     setIsEditDialogOpen(true);
   };
 
-  const generatePDF = (estimate: Estimate) => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 14;
-    let yPos = margin;
+  const generateInvoicePDF = () => {
+    if (!invoiceRef.current || !selectedEstimate) return;
 
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.text("ESTIMATE", pageWidth / 2, yPos, { align: "center" });
-    yPos += 10;
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text("ZENTROVERSE GLOBAL PVT LTD", pageWidth / 2, yPos, { align: "center" });
-    yPos += 5;
-    doc.setFontSize(10);
-    doc.text("ERP System", pageWidth / 2, yPos, { align: "center" });
-    yPos += 15;
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.text(`Estimate ID: ${estimate.estimateId}`, margin, yPos);
-    yPos += 6;
-    doc.text(`Job No: ${estimate.jobNo}`, margin, yPos);
-    yPos += 6;
-    doc.setFont("helvetica", "normal");
-    doc.text(`Date: ${new Date(estimate.date).toLocaleDateString()}`, margin, yPos);
-    yPos += 10;
-
-    doc.setFont("helvetica", "bold");
-    doc.text("Customer Details:", margin, yPos);
-    yPos += 6;
-    doc.setFont("helvetica", "normal");
-    doc.text(`Name: ${estimate.customerName}`, margin + 5, yPos);
-    yPos += 6;
-    doc.text(`Vehicle: ${estimate.vehicleDetails}`, margin + 5, yPos);
-    if (estimate.registrationNo) {
-      yPos += 6;
-      doc.text(`Registration: ${estimate.registrationNo}`, margin + 5, yPos);
-    }
-    yPos += 10;
-
-    const tableData = estimate.items.map((item) => [
-      item.part,
-      item.labour,
-      item.qty.toString(),
-      `₹${item.rate.toFixed(2)}`,
-      `₹${item.labourCost.toFixed(2)}`,
-      `${item.tax}%`,
-      `₹${(item.lineTotal || calculateTotal(item)).toFixed(2)}`,
-    ]);
-
-    try {
-      doc.autoTable({
-        startY: yPos,
-        head: [["Part", "Labour", "Qty", "Rate", "Labour Cost", "Tax %", "Total"]],
-        body: tableData,
-        theme: "striped",
-        headStyles: { fillColor: [41, 128, 185], textColor: 255, fontStyle: "bold" },
-        styles: { fontSize: 9, cellPadding: 3 },
-        columnStyles: {
-          0: { cellWidth: 50 },
-          1: { cellWidth: 40 },
-          2: { cellWidth: 15, halign: "center" },
-          3: { cellWidth: 25, halign: "right" },
-          4: { cellWidth: 30, halign: "right" },
-          5: { cellWidth: 20, halign: "center" },
-          6: { cellWidth: 25, halign: "right" },
+    html2pdf()
+      .set({
+        margin: [15, 15, 15, 15],
+        filename: `Estimate-${selectedEstimate.estimateId}-${new Date().toISOString().split("T")[0]}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          letterRendering: true,
+          windowWidth: 800,
+          windowHeight: 1200
         },
-      });
-    } catch (tableError) {
-      console.error("Error creating table:", tableError);
-      doc.setFontSize(10);
-      doc.text("Items:", margin, yPos);
-      yPos += 8;
-      estimate.items.forEach((item, idx) => {
-        doc.text(
-          `${idx + 1}. ${item.part} - ${item.labour} | Qty: ${item.qty} | Rate: ₹${item.rate} | Total: ₹${(item.lineTotal || calculateTotal(item)).toFixed(2)}`,
-          margin + 5,
-          yPos
-        );
-        yPos += 6;
-      });
-    }
-
-    const finalY = (doc as any).lastAutoTable?.finalY || yPos + 50;
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text(
-      `Grand Total: ₹${estimate.grandTotal.toFixed(2)}`,
-      pageWidth - margin,
-      finalY,
-      { align: "right" }
-    );
-
-    if (estimate.notes) {
-      const notesY = finalY + 15;
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.text("Notes:", margin, notesY);
-      doc.setFont("helvetica", "normal");
-      const splitNotes = doc.splitTextToSize(estimate.notes, pageWidth - 2 * margin);
-      doc.text(splitNotes, margin + 5, notesY + 5);
-    }
-
-    const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "italic");
-    doc.text(
-      "This is a computer-generated estimate. No signature required.",
-      pageWidth / 2,
-      pageHeight - 10,
-      { align: "center" }
-    );
-
-    return doc;
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      })
+      .from(invoiceRef.current)
+      .save();
   };
 
   const handleGenerateInvoice = () => {
@@ -311,9 +246,7 @@ export default function Estimation() {
     }
 
     try {
-      const doc = generatePDF(selectedEstimate);
-      const fileName = `Estimate-${selectedEstimate.estimateId}-${new Date().toISOString().split("T")[0]}.pdf`;
-      doc.save(fileName);
+      generateInvoicePDF();
       toast.success("Invoice PDF downloaded successfully!");
     } catch (error: any) {
       console.error("Error generating PDF:", error);
@@ -322,7 +255,7 @@ export default function Estimation() {
   };
 
   const handlePrintEstimate = () => {
-    if (!selectedEstimate) {
+    if (!invoiceRef.current || !selectedEstimate) {
       toast.error("Please select an estimate first");
       return;
     }
@@ -333,24 +266,29 @@ export default function Estimation() {
     }
 
     try {
-      const doc = generatePDF(selectedEstimate);
-      const pdfBlob = doc.output("blob");
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      const printWindow = window.open(pdfUrl, "_blank");
-      
-      if (printWindow) {
-        printWindow.onload = () => {
-          setTimeout(() => {
-            printWindow.print();
-            setTimeout(() => URL.revokeObjectURL(pdfUrl), 1000);
-          }, 250);
-        };
-        toast.success("Opening print dialog...");
-      } else {
-        const fileName = `Estimate-${selectedEstimate.estimateId}-${new Date().toISOString().split("T")[0]}.pdf`;
-        doc.save(fileName);
-        toast.info("Popup blocked. PDF downloaded instead. Please open and print manually.");
-      }
+      html2pdf()
+        .set({
+          margin: [15, 15, 15, 15],
+          filename: `Estimate-${selectedEstimate.estimateId}-${new Date().toISOString().split("T")[0]}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            letterRendering: true,
+            windowWidth: 800,
+            windowHeight: 1200
+          },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        })
+        .from(invoiceRef.current)
+        .outputPdf("dataurlnewwindow")
+        .then(() => {
+          toast.success("Opening print dialog...");
+        })
+        .catch((error: any) => {
+          console.error("Error printing:", error);
+          toast.error(`Failed to print estimate: ${error?.message || "Unknown error"}`);
+        });
     } catch (error: any) {
       console.error("Error printing:", error);
       toast.error(`Failed to print estimate: ${error?.message || "Unknown error"}`);
@@ -470,11 +408,16 @@ export default function Estimation() {
       }).unwrap();
       setSelectedEstimate(updated);
       setItems(updated.items);
+      // Reset form before closing dialog
+      if (e.currentTarget) {
+        e.currentTarget.reset();
+      }
       setIsAddItemDialogOpen(false);
-      e.currentTarget.reset();
       toast.success("Item added successfully!");
     } catch (error: any) {
-      toast.error(error?.data?.message || "Failed to add item");
+      console.error("Error adding item:", error);
+      const errorMessage = error?.data?.message || error?.message || "Failed to add item";
+      toast.error(errorMessage);
     }
   };
 
@@ -505,10 +448,12 @@ export default function Estimation() {
     try {
       const updatedItems = [...items];
       updatedItems[editingItemIndex] = updatedItem;
+      const grandTotal = updatedItems.reduce((sum, item) => sum + calculateTotal(item), 0);
       const updated = await updateEstimate({
         id: selectedEstimate._id,
         data: {
           items: updatedItems,
+          grandTotal,
         },
       }).unwrap();
       setSelectedEstimate(updated);
@@ -564,22 +509,58 @@ export default function Estimation() {
             </DialogHeader>
             <form onSubmit={handleCreateEstimate} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="customer">Customer Name</Label>
-                <Input id="customer" name="customer" placeholder="Enter customer name" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="vehicle">Vehicle Details</Label>
-                <Input id="vehicle" name="vehicle" placeholder="e.g., Maruti Swift" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="regNo">Registration No</Label>
-                <Input id="regNo" name="regNo" placeholder="e.g., MH 01 AB 1234" required />
+                <Label htmlFor="jobCardNo">Job Card Number</Label>
+                <Input
+                  id="jobCardNo"
+                  name="jobCardNo"
+                  value={jobCardNo}
+                  onChange={(e) => handleJobCardNoChange(e.target.value)}
+                  placeholder="Enter job card number"
+                  required
+                />
+                {isLoadingJobCard && (
+                  <p className="text-sm text-muted-foreground">Loading job card details...</p>
+                )}
+                {jobCardError && (
+                  <p className="text-sm text-destructive">This job card does not exist</p>
+                )}
+                {jobCardData && (jobCardData.data || (jobCardData as any).jobCard) && (
+                  <div className="mt-2 p-3 bg-muted rounded-md space-y-1">
+                    {(() => {
+                      const jobCard = jobCardData.data || (jobCardData as any).jobCard;
+                      return (
+                        <>
+                          <p className="text-sm">
+                            <span className="font-medium">Customer:</span> {jobCard.customerName || jobCard.customer}
+                          </p>
+                          <p className="text-sm">
+                            <span className="font-medium">Vehicle:</span> {jobCard.vehicle}
+                          </p>
+                          <p className="text-sm">
+                            <span className="font-medium">Registration:</span> {jobCard.regNo}
+                          </p>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsNewDialogOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsNewDialogOpen(false);
+                    setJobCardNo("");
+                    setJobCardNoToFetch(null);
+                  }}
+                >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isCreating}>
+                <Button
+                  type="submit"
+                  disabled={isCreating || isLoadingJobCard || !jobCardData}
+                >
                   {isCreating ? "Creating..." : "Create Estimate"}
                 </Button>
               </div>
@@ -647,14 +628,27 @@ export default function Estimation() {
                             </td>
                             <td className="py-3 px-4 text-sm">
                               <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleViewEstimate(est)}
-                                  title="View Estimate"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
+                                {est.items && est.items.length > 0 ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleViewEstimate(est)}
+                                    title="View Estimate"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleAddDetails(est)}
+                                    title="Add Details"
+                                    className="gap-1"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    Add Details
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="icon"
@@ -1200,6 +1194,13 @@ export default function Estimation() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Hidden Invoice Template for PDF Generation */}
+      {selectedEstimate && (
+        <div className="hidden">
+          <InvoiceTemplate ref={invoiceRef} estimate={selectedEstimate} />
+        </div>
+      )}
     </div>
   );
 }

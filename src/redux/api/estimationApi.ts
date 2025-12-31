@@ -25,12 +25,14 @@ export interface Estimate {
 }
 
 export interface CreateEstimatePayload {
+  jobNo?: string;
   customerName: string;
   vehicleDetails: string;
   registrationNo?: string;
   date?: string;
   status?: "requested" | "approved" | "pending";
   items: EstimateItem[];
+  grandTotal?: number;
   notes?: string;
 }
 

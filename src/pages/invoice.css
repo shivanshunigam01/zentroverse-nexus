@@ -1,0 +1,281 @@
+/* Invoice Template Styles - Scoped to .invoice-root to avoid affecting other components */
+
+.invoice-root {
+  width: 100%;
+  max-width: 190mm;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+  color: #000;
+  background: #fff;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* Header Section */
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  gap: 10px;
+}
+
+.invoice-company-logo {
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+}
+
+.invoice-company {
+  flex: 1;
+}
+
+.invoice-company-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: bold;
+  color: #000;
+  line-height: 1.2;
+}
+
+.invoice-company-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 9px;
+  color: #6b7280;
+}
+
+.invoice-title {
+  color: #2980b9;
+  margin: 0;
+  font-size: 28px;
+  font-weight: bold;
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Meta Information Section */
+.invoice-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  font-size: 8px;
+  gap: 20px;
+}
+
+.invoice-meta-left,
+.invoice-meta-right {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.invoice-meta-item {
+  margin: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.invoice-meta-label {
+  font-weight: bold;
+  color: #000;
+}
+
+.invoice-meta-value {
+  color: #000;
+}
+
+/* Bill To Section */
+.invoice-bill-to {
+  margin-bottom: 16px;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  background: #f9fafb;
+  box-sizing: border-box;
+}
+
+.invoice-bill-to-title {
+  margin: 0 0 8px 0;
+  font-size: 11px;
+  font-weight: bold;
+  color: #000;
+}
+
+.invoice-bill-to-name {
+  margin: 0 0 4px 0;
+  font-size: 10px;
+  font-weight: bold;
+  color: #000;
+}
+
+.invoice-bill-to-detail {
+  margin: 4px 0;
+  font-size: 9px;
+  color: #374151;
+}
+
+/* Table Styles */
+.invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  table-layout: fixed;
+  box-sizing: border-box;
+}
+
+.invoice-table-head {
+  background: #2980b9;
+  color: #fff;
+}
+
+.invoice-table-th {
+  padding: 8px 6px;
+  border: 1px solid #ddd;
+  font-size: 9px;
+  font-weight: bold;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.invoice-table-th:first-child {
+  width: 8%;
+  text-align: center;
+}
+
+.invoice-table-th-desc {
+  width: 50%;
+}
+
+.invoice-table-th-number {
+  text-align: right;
+  width: 14%;
+}
+
+.invoice-table-body {
+  background: #fff;
+}
+
+.invoice-table-row {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.invoice-table-row:nth-child(even) {
+  background: #f9fafb;
+}
+
+.invoice-table-td {
+  padding: 8px 6px;
+  border: 1px solid #e5e7eb;
+  font-size: 8px;
+  color: #000;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.invoice-table-td-center {
+  text-align: center;
+}
+
+.invoice-table-td-number {
+  text-align: right;
+}
+
+.invoice-table-td-desc {
+  width: 50%;
+}
+
+.invoice-table-td-bold {
+  font-weight: bold;
+}
+
+/* Totals Section */
+.invoice-totals {
+  width: 100%;
+  max-width: 280px;
+  margin-left: auto;
+  margin-top: 16px;
+  margin-bottom: 24px;
+  box-sizing: border-box;
+}
+
+.invoice-totals-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 0;
+  font-size: 8px;
+}
+
+.invoice-totals-row-highlight {
+  background: #e6f2ff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 2px 0;
+}
+
+.invoice-totals-row-grand {
+  font-weight: bold;
+  font-size: 9px;
+  padding: 6px 0;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 4px;
+}
+
+.invoice-totals-label {
+  color: #000;
+  margin: 0;
+}
+
+.invoice-totals-label-bold {
+  font-weight: bold;
+}
+
+.invoice-totals-value {
+  color: #000;
+  margin: 0;
+  text-align: right;
+}
+
+.invoice-totals-value-grand {
+  color: #2980b9;
+  font-size: 11px;
+}
+
+.invoice-totals-value-bold {
+  font-weight: bold;
+}
+
+/* Footer Section */
+.invoice-footer {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.invoice-footer-thanks {
+  margin: 0 0 12px 0;
+  font-size: 9px;
+  color: #000;
+}
+
+.invoice-footer-terms {
+  margin-top: 12px;
+}
+
+.invoice-footer-terms-title {
+  margin: 0 0 4px 0;
+  font-size: 9px;
+  font-weight: bold;
+  color: #000;
+}
+
+.invoice-footer-terms-text {
+  margin: 0;
+  font-size: 8px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
