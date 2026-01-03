@@ -55,7 +55,12 @@ const navigation = [
       { name: "Stock", href: "/inventory" },
       { name: "Purchase Orders", href: "/purchase-orders" },
       { name: "Inward", href: "/inward" },
-      { name: "Stock Issue", href: "/stock-issue" },
+      { name: "Stock Issues", href: "/stock-issues" },
+      { name: "Purchase Returns", href: "/purchase-returns" },
+      {
+        name: "Stock Alerts",
+        href: "/stock-alerts",
+      },
       { name: "Stock Transfer", href: "/stock-transfer" },
     ],
   },

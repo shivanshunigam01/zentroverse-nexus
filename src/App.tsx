@@ -35,6 +35,8 @@ import Register from "./pages/Register";
 import ProtectedRoute from "./ProtectedRoute";
 import { Provider } from "react-redux";
 import { store } from "./redux/store";
+import PurchaseReturns from "./pages/PurchaseReturns";
+import StockAlerts from "./pages/StockAlerts";
 
 const queryClient = new QueryClient();
 
@@ -67,7 +69,9 @@ const App = () => (
               <Route path="purchase-orders" element={<PurchaseOrders />} />
               <Route path="vendors" element={<Vendors />} />
               <Route path="inward" element={<Inward />} />
-              <Route path="stock-issue" element={<StockIssue />} />
+              <Route path="stock-issues" element={<StockIssue />} />
+              <Route path="purchase-returns" element={<PurchaseReturns />} />
+              <Route path="stock-alerts" element={<StockAlerts />} />
               <Route path="stock-transfer" element={<StockTransfer />} />
               <Route path="crm-reminders" element={<CRMReminders />} />
               <Route path="reports" element={<Reports />} />

@@ -43,7 +43,7 @@ export const authApi = publicApi.injectEndpoints({
         method: "POST",
         body: credentials,
       }),
-      transformResponse: (response: { accessToken: string; user: any }) => {
+      transformResponse: (response: { accessToken: string; user: any, refreshToken: string }) => {
         return response;
       },
     }),
