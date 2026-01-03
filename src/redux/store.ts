@@ -16,7 +16,6 @@ import appReducer from './reducer/app.reducer';
 const authPersistConfig = {
   key: 'auth',
   storage,
-  whitelist: ['accessToken', 'user', 'isAuthenticated'],
 };
 
 const persistedAuthReducer = persistReducer(authPersistConfig, appReducer);

@@ -137,13 +137,14 @@ export default function Inward() {
           reset();
         })
         .catch(() => toast.error("Update failed"));
-      reset();
+      reset({ });
+      setEditingId(null);
     } else {
       addStockInward(body)
         .unwrap()
         .then(() => {
           toast.success("Inward saved");
-          reset();
+          reset({});
         })
         .catch(() => toast.error("Save failed"));
       reset();
