@@ -42,21 +42,51 @@ import type { CreateJobCardRequest, JobCard } from "@/types/jobCard";
 import { format } from "date-fns";
 
 const getStatusBadge = (status: string) => {
-  const variants: { [key: string]: "default" | "secondary" | "destructive" | "outline" } = {
-    "Delivered": "default",
-    "delivered": "default",
-    "In Progress": "secondary",
-    "in_progress": "secondary",
-    "Pending": "outline",
-    "pending": "outline",
-    "Invoice": "secondary",
-    "invoice": "secondary",
-    "Cancelled": "destructive",
-    "cancelled": "destructive",
+
+  const statusLower = (status || '').toString().toLowerCase().trim();
+
+  // Define color classes for each status
+  const statusColors: { [key: string]: string } = {
+    "delivered": "bg-green-100 text-green-800 border-green-200 hover:bg-green-200",
+    "in progress": "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200",
+    "in_progress": "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200",
+    "pending": "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200",
+    "invoice": "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200",
+    "cancelled": "bg-red-100 text-red-800 border-red-200 hover:bg-red-200",
   };
-  const key = (status || '').toString().toLowerCase();
-  const item = variants[key] || 'default';
-  return <Badge variant={item as "default" | "secondary" | "destructive" | "outline"}>{status}</Badge>;
+
+  // Normalize status key - handle both "in progress" and "in_progress"
+  const normalizedKey = statusLower.replace(/\s+/g, '_');
+  // Check both original and normalized versions
+  const colorClass = statusColors[statusLower] || statusColors[normalizedKey] || "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
+
+  return (
+    <Badge
+      variant="outline"
+      className={`${colorClass} border`}
+    >
+      {status}
+    </Badge>
+  );
+};
+
+// Helper function to parse phone number and extract prefix
+const parsePhoneNumber = (phoneNumber: string | undefined): { prefix: string; number: string } => {
+  if (!phoneNumber) return { prefix: "+91", number: "" };
+
+  // Check if phone starts with common prefixes
+  if (phoneNumber.startsWith("+91")) {
+    return { prefix: "+91", number: phoneNumber.substring(3) };
+  } else if (phoneNumber.startsWith("+1")) {
+    return { prefix: "+1", number: phoneNumber.substring(2) };
+  } else if (phoneNumber.startsWith("+44")) {
+    return { prefix: "+44", number: phoneNumber.substring(3) };
+  } else if (phoneNumber.startsWith("+971")) {
+    return { prefix: "+971", number: phoneNumber.substring(4) };
+  }
+
+  // Default to +91 if no prefix found
+  return { prefix: "+91", number: phoneNumber };
 };
 
 export default function JobCards() {
@@ -154,11 +184,16 @@ export default function JobCards() {
     const form = e.currentTarget;
     const formData = new FormData(form);
 
+    // Get phone prefix and number, combine them
+    const phonePrefix = formData.get("phonePrefix") as string || "+91";
+    const phoneNumber = formData.get("mobileNo") as string;
+    const mobileNo = phonePrefix + phoneNumber;
+
     const jobCardData: CreateJobCardRequest = {
       regNo: formData.get("regNo") as string,
       vehicle: formData.get("vehicle") as string,
       customerName: formData.get("customerName") as string,
-      mobileNo: formData.get("mobileNo") as string,
+      mobileNo: mobileNo,
       arrivalDate: formData.get("arrivalDate") as string,
       arrivalTime: formData.get("arrivalTime") as string,
       rfeNo: formData.get("rfeNo") as string || undefined,
@@ -210,12 +245,17 @@ export default function JobCards() {
 
     const formData = new FormData(e.currentTarget);
 
+    // Get phone prefix and number, combine them
+    const phonePrefix = formData.get("edit-phonePrefix") as string || "+91";
+    const phoneNumber = formData.get("edit-mobileNo") as string;
+    const mobileNo = phonePrefix + phoneNumber;
+
     const jobCardData: Partial<CreateJobCardRequest> = {
       jobCardNo: formData.get("jobCardNo") as string,
       regNo: formData.get("regNo") as string,
       vehicle: formData.get("vehicle") as string,
       customerName: formData.get("customerName") as string,
-      mobileNo: formData.get("mobileNo") as string,
+      mobileNo: mobileNo,
       arrivalDate: formData.get("arrivalDate") as string,
       arrivalTime: formData.get("arrivalTime") as string,
       rfeNo: formData.get("rfeNo") as string || undefined,
@@ -357,36 +397,96 @@ export default function JobCards() {
               New Job Card
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 [&>button]:z-20">
+            <DialogHeader className="sticky top-0 z-10 bg-background border-b rounded-t-lg px-6 py-4 pr-12">
               <DialogTitle>Create New Job Card</DialogTitle>
               <DialogDescription>Enter the details to create a new job card</DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleCreateJobCard} className="space-y-4">
+            <form onSubmit={handleCreateJobCard} className="space-y-4 overflow-y-auto flex-1 px-6 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="regNo">Registration No</Label>
-                  <Input id="regNo" name="regNo" placeholder="e.g., MH 01 AB 1234" required />
+                  <Input
+                    id="regNo"
+                    name="regNo"
+                    placeholder="e.g., MH01AB1234"
+                    required
+                    className="bg-gray-50 border border-border rounded-md"
+                    pattern="^[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{4}$"
+                    title="Enter valid Indian vehicle registration number (e.g., GJ01AB1234)"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="vehicle">Vehicle</Label>
-                  <Input id="vehicle" name="vehicle" placeholder="e.g., Maruti Swift" required />
+                  <Input
+                    id="vehicle"
+                    name="vehicle"
+                    placeholder="e.g., Maruti Swift"
+                    required
+                    className="bg-gray-50 border border-border rounded-md"
+                    minLength={2}
+                    maxLength={30}
+                    title="Vehicle name must be between 2 and 30 characters"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="serviceType">Service Type</Label>
-                  <Input id="serviceType" name="serviceType" placeholder="e.g., Full Service" />
+                  <Input
+                    id="serviceType"
+                    name="serviceType"
+                    placeholder="e.g., Full Service"
+                    required
+                    className="bg-gray-50 border border-border rounded-md"
+                    minLength={2}
+                    maxLength={30}
+                    title="Service type must be between 2 and 30 characters"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="customerName">Customer Name</Label>
-                  <Input id="customerName" name="customerName" placeholder="Enter name" required />
+                  <Input
+                    id="customerName"
+                    name="customerName"
+                    placeholder="Enter name"
+                    required
+                    className="bg-gray-50 border border-border rounded-md"
+                    pattern="^[A-Za-z ]+$"
+                    minLength={3}
+                    maxLength={40}
+                    title="Customer name must contain only alphabets and spaces, 3-40 characters"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="mobileNo">Mobile No</Label>
-                  <Input id="mobileNo" name="mobileNo" type="tel" placeholder="Enter mobile" required />
+                  <div className="flex gap-2">
+                    <Select name="phonePrefix" defaultValue="+91">
+                      <SelectTrigger className="w-[90px] bg-gray-50 border border-border rounded-md">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="+91">+91</SelectItem>
+                        <SelectItem value="+1">+1</SelectItem>
+                        <SelectItem value="+44">+44</SelectItem>
+                        <SelectItem value="+971">+971</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="mobileNo"
+                      name="mobileNo"
+                      type="tel"
+                      placeholder="9876543210"
+                      required
+                      className="bg-gray-50 border border-border rounded-md flex-1"
+                      pattern="^[0-9]{10}$"
+                      title="Mobile number must be exactly 10 digits"
+                      minLength={10}
+                      maxLength={10}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="arrivalDate">Arrival Date</Label>
@@ -396,6 +496,9 @@ export default function JobCards() {
                     type="date"
                     defaultValue={new Date().toISOString().split("T")[0]}
                     required
+                    className="bg-gray-50 border border-border rounded-md"
+                    max={new Date().toISOString().split("T")[0]}
+                    title="Only current or past dates are allowed"
                   />
                 </div>
               </div>
@@ -408,23 +511,42 @@ export default function JobCards() {
                     type="time"
                     defaultValue={new Date().toTimeString().slice(0, 5)}
                     required
+                    className="bg-gray-50 border border-border rounded-md"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="rfeNo">RFE No</Label>
-                  <Input id="rfeNo" name="rfeNo" placeholder="RFE Number" />
+                  <Input
+                    id="rfeNo"
+                    name="rfeNo"
+                    placeholder="RFE Number"
+                    className="bg-gray-50 border border-border rounded-md"
+                    pattern="^[A-Za-z0-9]+$"
+                    minLength={3}
+                    maxLength={20}
+                    title="RFE number can contain only alphabets and numbers, 3-20 characters"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="invoiceNo">Invoice No</Label>
-                  <Input id="invoiceNo" name="invoiceNo" placeholder="Invoice Number" />
+                  <Input
+                    id="invoiceNo"
+                    name="invoiceNo"
+                    placeholder="Invoice Number"
+                    className="bg-gray-50 border border-border rounded-md"
+                    pattern="^[A-Za-z0-9-]+$"
+                    minLength={3}
+                    maxLength={20}
+                    title="Invoice number can contain alphabets, numbers, and hyphens, 3-20 characters"
+                  />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select name="status" defaultValue="Pending">
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-gray-50 border border-border rounded-md">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -438,7 +560,15 @@ export default function JobCards() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" name="notes" placeholder="Additional notes" rows={3} />
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  placeholder="Additional notes"
+                  rows={3}
+                  className="bg-gray-50 border border-border rounded-md"
+                  maxLength={250}
+                  title="Maximum 250 characters allowed"
+                />
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -616,47 +746,47 @@ export default function JobCards() {
 
       {/* View Dialog - Read Only */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 [&>button]:z-20">
+          <DialogHeader className="sticky top-0 z-10 bg-background border-b rounded-t-lg px-6 py-4 pr-12">
             <DialogTitle>Job Card Details</DialogTitle>
             <DialogDescription>View job card information</DialogDescription>
           </DialogHeader>
           {selectedJobCard && (
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto flex-1 px-6 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Job Card No</Label>
-                  <div className="p-2 rounded-md bg-secondary text-sm">{selectedJobCard.jobCardNo || selectedJobCard.jobNumber}</div>
+                  <div className="p-2 rounded-md text-sm bg-black-50 shadow-md border border-border">{selectedJobCard.jobCardNo || selectedJobCard.jobNumber}</div>
                 </div>
                 <div className="space-y-2">
                   <Label>Registration No</Label>
-                  <div className="p-2 rounded-md bg-secondary text-sm">{selectedJobCard.regNo}</div>
+                  <div className="p-2 rounded-md text-sm bg-black-50 shadow-md border border-border">{selectedJobCard.regNo}</div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Vehicle</Label>
-                  <div className="p-2 rounded-md bg-secondary text-sm">{selectedJobCard.vehicle}</div>
+                  <div className="p-2 rounded-md text-sm bg-black-50 shadow-md border border-border">{selectedJobCard.vehicle}</div>
                 </div>
                 <div className="space-y-2">
                   <Label>Service Type</Label>
-                  <div className="p-2 rounded-md bg-secondary text-sm">{selectedJobCard.serviceType || "-"}</div>
+                  <div className="p-2 rounded-md text-sm bg-black-50 shadow-md border border-border">{selectedJobCard.serviceType || "-"}</div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Customer Name</Label>
-                  <div className="p-2 rounded-md bg-secondary text-sm">{selectedJobCard.customerName || selectedJobCard.customer}</div>
+                  <div className="p-2 rounded-md text-sm bg-black-50 shadow-md border border-border">{selectedJobCard.customerName || selectedJobCard.customer}</div>
                 </div>
                 <div className="space-y-2">
                   <Label>Mobile No</Label>
-                  <div className="p-2 rounded-md bg-secondary text-sm">{selectedJobCard.mobileNo || selectedJobCard.mobile || "-"}</div>
+                  <div className="p-2 rounded-md text-sm bg-black-50 shadow-md border border-border">{selectedJobCard.mobileNo || selectedJobCard.mobile || "-"}</div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Arrival Date</Label>
-                  <div className="p-2 rounded-md bg-secondary text-sm">
+                  <div className="p-2 rounded-md text-sm bg-black-50 shadow-md border border-border">
                     {selectedJobCard.arrivalDate
                       ? formatDate(selectedJobCard.arrivalDate)
                       : selectedJobCard.createdAt
@@ -666,26 +796,23 @@ export default function JobCards() {
                 </div>
                 <div className="space-y-2">
                   <Label>Arrival Time</Label>
-                  <div className="p-2 rounded-md bg-secondary text-sm">{selectedJobCard.arrivalTime || "-"}</div>
+                  <div className="p-2 rounded-md text-sm bg-black-50 shadow-md border border-border">{selectedJobCard.arrivalTime || "-"}</div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>RFE No</Label>
-                  <div className="p-2 rounded-md bg-secondary text-sm">{selectedJobCard.rfeNo || "-"}</div>
+                  <div className="p-2 rounded-md text-sm bg-black-50 shadow-md border border-border">{selectedJobCard.rfeNo || "-"}</div>
                 </div>
                 <div className="space-y-2">
                   <Label>Invoice No</Label>
-                  <div className="p-2 rounded-md bg-secondary text-sm">{selectedJobCard.invoiceNo || "-"}</div>
+                  <div className="p-2 rounded-md text-sm bg-black-50 shadow-md border border-border">{selectedJobCard.invoiceNo || "-"}</div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <div className="p-2">{getStatusBadge(selectedJobCard.status as string)}</div>
-              </div>
+
               <div className="space-y-2">
                 <Label>Notes</Label>
-                <div className="p-2 rounded-md bg-secondary text-sm min-h-[80px] whitespace-pre-wrap">{selectedJobCard.notes || "-"}</div>
+                <div className="p-2 rounded-md   text-sm bg-black-50 shadow-md border border-border min-h-[80px] whitespace-pre-wrap">{selectedJobCard.notes || "-"}</div>
               </div>
               <div className="flex justify-end">
                 <Button
@@ -706,13 +833,13 @@ export default function JobCards() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 [&>button]:z-20">
+          <DialogHeader className="sticky top-0 z-10 bg-background border-b rounded-t-lg px-6 py-4 pr-12">
             <DialogTitle>Edit Job Card</DialogTitle>
             <DialogDescription>Update the job card details</DialogDescription>
           </DialogHeader>
           {selectedJobCard && (
-            <form onSubmit={handleEditJobCard} className="space-y-4">
+            <form onSubmit={handleEditJobCard} className="space-y-4 overflow-y-auto flex-1 px-6 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-jobCardNo">Job Card No</Label>
@@ -721,7 +848,7 @@ export default function JobCards() {
                     name="jobCardNo"
                     defaultValue={selectedJobCard.jobCardNo || selectedJobCard.jobNumber}
                     readOnly
-                    className="bg-secondary cursor-not-allowed"
+                    className="bg-gray-50 cursor-not-allowed shadow-sm"
                   />
                 </div>
                 <div className="space-y-2">
@@ -731,6 +858,9 @@ export default function JobCards() {
                     name="regNo"
                     defaultValue={selectedJobCard.regNo}
                     required
+                    className="bg-gray-50 border border-border rounded-md"
+                    pattern="^[A-Z]{2}[0-9]{2}[A-Z]{2}[0-9]{4}$"
+                    title="Enter valid Indian vehicle registration number (e.g., GJ01AB1234)"
                   />
                 </div>
               </div>
@@ -742,6 +872,10 @@ export default function JobCards() {
                     name="vehicle"
                     defaultValue={selectedJobCard.vehicle}
                     required
+                    className="bg-gray-50 border border-border rounded-md"
+                    minLength={2}
+                    maxLength={30}
+                    title="Vehicle name must be between 2 and 30 characters"
                   />
                 </div>
                 <div className="space-y-2">
@@ -750,6 +884,11 @@ export default function JobCards() {
                     id="edit-serviceType"
                     name="serviceType"
                     defaultValue={selectedJobCard.serviceType || ""}
+                    required
+                    className="bg-gray-50 border border-border rounded-md"
+                    minLength={2}
+                    maxLength={30}
+                    title="Service type must be between 2 and 30 characters"
                   />
                 </div>
               </div>
@@ -761,17 +900,43 @@ export default function JobCards() {
                     name="customerName"
                     defaultValue={selectedJobCard.customerName}
                     required
+                    className="bg-gray-50 border border-border rounded-md"
+                    pattern="^[A-Za-z ]+$"
+                    minLength={3}
+                    maxLength={40}
+                    title="Customer name must contain only alphabets and spaces, 3-40 characters"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-mobileNo">Mobile No</Label>
-                  <Input
-                    id="edit-mobileNo"
-                    name="mobileNo"
-                    type="tel"
-                    defaultValue={selectedJobCard.mobileNo}
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <Select
+                      name="edit-phonePrefix"
+                      defaultValue={parsePhoneNumber(selectedJobCard.mobileNo || selectedJobCard.mobile).prefix}
+                    >
+                      <SelectTrigger className="w-[90px] bg-gray-50 border border-border rounded-md">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="+91">+91</SelectItem>
+                        <SelectItem value="+1">+1</SelectItem>
+                        <SelectItem value="+44">+44</SelectItem>
+                        <SelectItem value="+971">+971</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="edit-mobileNo"
+                      name="mobileNo"
+                      type="tel"
+                      defaultValue={parsePhoneNumber(selectedJobCard.mobileNo || selectedJobCard.mobile).number}
+                      required
+                      className="bg-gray-50 border border-border rounded-md flex-1"
+                      pattern="^[0-9]{10}$"
+                      title="Mobile number must be exactly 10 digits"
+                      minLength={10}
+                      maxLength={10}
+                    />
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -787,6 +952,9 @@ export default function JobCards() {
                         : ""
                     }
                     required
+                    className="bg-gray-50 border border-border rounded-md"
+                    max={new Date().toISOString().split("T")[0]}
+                    title="Only current or past dates are allowed"
                   />
                 </div>
                 <div className="space-y-2">
@@ -797,6 +965,7 @@ export default function JobCards() {
                     type="time"
                     defaultValue={selectedJobCard.arrivalTime}
                     required
+                    className="bg-gray-50 border border-border rounded-md"
                   />
                 </div>
               </div>
@@ -807,6 +976,11 @@ export default function JobCards() {
                     id="edit-rfeNo"
                     name="rfeNo"
                     defaultValue={selectedJobCard.rfeNo || ""}
+                    className="bg-gray-50 border border-border rounded-md"
+                    pattern="^[A-Za-z0-9]+$"
+                    minLength={3}
+                    maxLength={20}
+                    title="RFE number can contain only alphabets and numbers, 3-20 characters"
                   />
                 </div>
                 <div className="space-y-2">
@@ -815,13 +989,18 @@ export default function JobCards() {
                     id="edit-invoiceNo"
                     name="invoiceNo"
                     defaultValue={selectedJobCard.invoiceNo || ""}
+                    className="bg-gray-50 border border-border rounded-md"
+                    pattern="^[A-Za-z0-9-]+$"
+                    minLength={3}
+                    maxLength={20}
+                    title="Invoice number can contain alphabets, numbers, and hyphens, 3-20 characters"
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-status">Status</Label>
                 <Select name="status" defaultValue={selectedJobCard.status}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-gray-50 border border-border rounded-md">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -840,6 +1019,9 @@ export default function JobCards() {
                   name="notes"
                   defaultValue={selectedJobCard.notes || ""}
                   rows={3}
+                  className="bg-gray-50 border border-border rounded-md"
+                  maxLength={250}
+                  title="Maximum 250 characters allowed"
                 />
               </div>
               <div className="flex justify-end gap-2">
