@@ -57,7 +57,7 @@ const baseQueryUpdated = async (args: any, api: any, extraOptions: any) => {
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryUpdated,
-  tagTypes: ['User', 'Post', 'Estimate','JobCard','stock', 'counterSales','inwards','stockalert','stocktransfer'],
+  tagTypes: ['User', 'Post', 'Estimate','JobCard','stock', 'counterSales','inwards','stockalert','stocktransfer','customer'],
   endpoints: () => ({}),
 });
 
