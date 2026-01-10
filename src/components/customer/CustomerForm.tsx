@@ -121,7 +121,7 @@ export default function CustomerForm({ id, onDone, onCancel }: { id?: string | n
             control={control}
             name="customerType"
             render={({ field }) => (
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
+              <Select onValueChange={field.onChange} value={field.value}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select Customer Type" />
                 </SelectTrigger>

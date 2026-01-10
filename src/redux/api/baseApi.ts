@@ -27,7 +27,7 @@ const baseQueryUpdated = async (args: any, api: any, extraOptions: any) => {
         {
           url: '/auth/refresh-token',
           method: 'POST',
-          body: { refresh: refreshToken },
+          body: { refreshToken: refreshToken },
         },
         api,
         extraOptions
