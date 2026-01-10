@@ -31,7 +31,7 @@ const getStatusBadge = (status: string) => {
   return <Badge variant={variants[status] || "default"}>{status}</Badge>;
 };
 
-export default function PurchaseOrders() {
+export default function PurchaseReturns() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data, isLoading } = useGetPurchaseOrderQuery({ page: 1, limit: 200 });
@@ -70,10 +70,10 @@ export default function PurchaseOrders() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Purchase Orders
+            Purchase Returns
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage supplier purchase orders
+            Manage supplier purchase returns
           </p>
         </div>
           <div className="flex gap-2">
