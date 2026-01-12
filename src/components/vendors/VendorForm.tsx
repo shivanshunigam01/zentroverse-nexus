@@ -1,92 +1,107 @@
 import React, { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Loader } from 'lucide-react';
 import { toast } from 'sonner';
-import { useGetVendorByIDQuery, useAddVendorMutation, useUpdateVendorMutation } from '@/redux/services/vendorSlice';
+import {
+  useGetVendorByIDQuery,
+  useAddVendorMutation,
+  useUpdateVendorMutation,
+} from '@/redux/services/vendorSlice';
+import { CreateVendorRequest, ApiErrorResponse } from '@/types/vendor';
 
 const schema = z.object({
   name: z.string().min(1, 'Vendor name is required'),
-  contact: z.string().min(10, 'Contact must be at least 10 digits'),
+  contactNumber: z.string().min(10, 'Contact must be at least 10 digits'),
   email: z.string().email('Invalid email address'),
-  creditDays: z.preprocess((v) => (v === '' ? undefined : Number(v)), z.number().min(1, 'Credit days must be at least 1')),
+  creditDays: z.preprocess(
+    (v) => (v === '' ? undefined : Number(v)),
+    z.number().min(1, 'Credit days must be at least 1')
+  ),
   region: z.string().min(1, 'Region is required'),
   gstin: z.string().min(15, 'GSTIN must be at least 15 characters'),
-  address: z.string().min(5, 'Address is required'),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-export default function VendorForm({ 
-  id, 
-  onDone, 
-  onCancel 
-}: { 
-  id?: string | null; 
-  onDone?: () => void; 
-  onCancel?: () => void; 
-}) {
-  const { data: existing } = useGetVendorByIDQuery(
-    { id: id || '' }, 
+interface VendorFormProps {
+  id?: string | null;
+  onDone?: () => void;
+  onCancel?: () => void;
+}
+
+export default function VendorForm({
+  id,
+  onDone,
+  onCancel,
+}: VendorFormProps) {
+  const { data: vendorData, isLoading: isFetching } = useGetVendorByIDQuery(
+    { id: id || '' },
     { skip: !id }
   );
-  const [addVendor] = useAddVendorMutation();
-  const [updateVendor] = useUpdateVendorMutation();
 
-  const { control, handleSubmit, reset, register, formState: { errors } } = useForm<FormValues>({
+  const [addVendor, { isLoading: isAdding }] = useAddVendorMutation();
+  const [updateVendor, { isLoading: isUpdating }] = useUpdateVendorMutation();
+
+  const {
+    handleSubmit,
+    reset,
+    register,
+    formState: { errors },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
-      contact: '',
+      contactNumber: '',
       email: '',
       creditDays: 30,
       region: '',
       gstin: '',
-      address: '',
     },
   });
 
   useEffect(() => {
-    if (existing?.data) {
-      const d = existing.data;
+    if (vendorData?.vendor) {
+      const vendor = vendorData.vendor;
       reset({
-        name: d.name || '',
-        contact: d.contact || '',
-        email: d.email || '',
-        creditDays: d.creditDays || 30,
-        region: d.region || '',
-        gstin: d.gstin || '',
-        address: d.address || '',
+        name: vendor.name,
+        contactNumber: vendor.contactNumber,
+        email: vendor.email,
+        creditDays: vendor.creditDays,
+        region: vendor.region,
+        gstin: vendor.gstin,
       });
     }
-  }, [existing, reset]);
+  }, [vendorData, reset]);
 
   const onSubmit = (values: FormValues) => {
-    const payload = {
+    const payload: CreateVendorRequest = {
       name: values.name,
-      contact: values.contact,
+      contactNumber: values.contactNumber,
       email: values.email,
       creditDays: values.creditDays,
       region: values.region,
       gstin: values.gstin,
-      address: values.address,
     };
 
     if (id) {
+      // Update vendor
       updateVendor({ id, body: payload })
         .unwrap()
         .then(() => {
           toast.success('Vendor updated successfully');
           onDone?.();
         })
-        .catch((error) => {
+        .catch((error: ApiErrorResponse) => {
           const message = error?.data?.message || 'Failed to update vendor';
           toast.error(message);
         });
     } else {
+      // Add new vendor
       addVendor(payload)
         .unwrap()
         .then(() => {
@@ -94,12 +109,23 @@ export default function VendorForm({
           onDone?.();
           reset();
         })
-        .catch((error) => {
+        .catch((error: ApiErrorResponse) => {
           const message = error?.data?.message || 'Failed to create vendor';
           toast.error(message);
         });
     }
   };
+
+  const isSubmitting = isAdding || isUpdating;
+
+  // Show loading state while fetching existing vendor data
+  if (id && isFetching) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <Loader className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -111,6 +137,7 @@ export default function VendorForm({
           placeholder="Enter vendor name"
           {...register('name')}
           className={errors.name ? 'border-red-500' : ''}
+          disabled={isSubmitting}
         />
         {errors.name && (
           <p className="text-sm text-red-500">{errors.name.message}</p>
@@ -119,16 +146,17 @@ export default function VendorForm({
 
       {/* Contact Number */}
       <div className="space-y-2">
-        <Label htmlFor="contact">Contact Number *</Label>
+        <Label htmlFor="contactNumber">Contact Number *</Label>
         <Input
-          id="contact"
+          id="contactNumber"
           type="tel"
-          placeholder="Enter contact number"
-          {...register('contact')}
-          className={errors.contact ? 'border-red-500' : ''}
+          placeholder="Enter contact number (10+ digits)"
+          {...register('contactNumber')}
+          className={errors.contactNumber ? 'border-red-500' : ''}
+          disabled={isSubmitting}
         />
-        {errors.contact && (
-          <p className="text-sm text-red-500">{errors.contact.message}</p>
+        {errors.contactNumber && (
+          <p className="text-sm text-red-500">{errors.contactNumber.message}</p>
         )}
       </div>
 
@@ -141,6 +169,7 @@ export default function VendorForm({
           placeholder="Enter email address"
           {...register('email')}
           className={errors.email ? 'border-red-500' : ''}
+          disabled={isSubmitting}
         />
         {errors.email && (
           <p className="text-sm text-red-500">{errors.email.message}</p>
@@ -157,6 +186,7 @@ export default function VendorForm({
             placeholder="e.g., 30"
             {...register('creditDays')}
             className={errors.creditDays ? 'border-red-500' : ''}
+            disabled={isSubmitting}
           />
           {errors.creditDays && (
             <p className="text-sm text-red-500">{errors.creditDays.message}</p>
@@ -169,6 +199,7 @@ export default function VendorForm({
             placeholder="e.g., Mumbai"
             {...register('region')}
             className={errors.region ? 'border-red-500' : ''}
+            disabled={isSubmitting}
           />
           {errors.region && (
             <p className="text-sm text-red-500">{errors.region.message}</p>
@@ -184,23 +215,10 @@ export default function VendorForm({
           placeholder="Enter GSTIN (15 characters)"
           {...register('gstin')}
           className={errors.gstin ? 'border-red-500' : ''}
+          disabled={isSubmitting}
         />
         {errors.gstin && (
           <p className="text-sm text-red-500">{errors.gstin.message}</p>
-        )}
-      </div>
-
-      {/* Address */}
-      <div className="space-y-2">
-        <Label htmlFor="address">Address *</Label>
-        <Input
-          id="address"
-          placeholder="Enter full address"
-          {...register('address')}
-          className={errors.address ? 'border-red-500' : ''}
-        />
-        {errors.address && (
-          <p className="text-sm text-red-500">{errors.address.message}</p>
         )}
       </div>
 
@@ -210,10 +228,12 @@ export default function VendorForm({
           type="button"
           variant="outline"
           onClick={onCancel}
+          disabled={isSubmitting}
         >
           Cancel
         </Button>
-        <Button type="submit">
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting && <Loader className="h-4 w-4 mr-2 animate-spin" />}
           {id ? 'Update Vendor' : 'Add Vendor'}
         </Button>
       </div>
