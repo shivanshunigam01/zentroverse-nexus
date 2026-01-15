@@ -37,6 +37,7 @@ import { Provider } from "react-redux";
 import { store } from "./redux/store";
 import PurchaseReturns from "./pages/PurchaseReturns";
 import StockAlerts from "./pages/StockAlerts";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +90,7 @@ const App = () => (
                 element={<AssociatedWorkshops />}
               />
               <Route path="settings" element={<Settings />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
